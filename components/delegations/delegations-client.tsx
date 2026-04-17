@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatDate, getInitials } from "@/lib/utils";
-import { Plus, X, Calendar, Trash2, GitBranch } from "lucide-react";
+import { formatDate, getInitials, CLIENT_COLORS } from "@/lib/utils";
+import { Plus, X, Calendar, Trash2, GitBranch, UserPlus, AlertCircle } from "lucide-react";
 import { QuickStatus } from "@/components/ui/quick-status";
 
 interface TeamMember { id: string; name: string; color: string; role: string; }
@@ -29,12 +29,15 @@ const PRIORITY_OPTS = [
   { value: "LOW",    label: "Low",    cls: "priority-low"    },
 ];
 
-const ROLE_LABELS: Record<string, string> = {
-  SENIOR_DESIGNER: "Senior Designer",
-  JUNIOR_DESIGNER: "Junior Designer",
-  ART_DIRECTOR: "Art Director",
-  DESIGNER: "Designer",
-};
+const ROLE_OPTS = [
+  { value: "ART_DIRECTOR",    label: "Art Director"    },
+  { value: "SENIOR_DESIGNER", label: "Senior Designer" },
+  { value: "JUNIOR_DESIGNER", label: "Junior Designer" },
+  { value: "DESIGNER",        label: "Designer"        },
+  { value: "MEMBER",          label: "Team Member"     },
+];
+
+const ROLE_LABELS: Record<string, string> = Object.fromEntries(ROLE_OPTS.map((r) => [r.value, r.label]));
 
 const FILTER_TABS = [
   { value: "ALL",         label: "All"         },
@@ -43,15 +46,123 @@ const FILTER_TABS = [
   { value: "DONE",        label: "Done"        },
 ];
 
-export function DelegationsClient({ initialDelegations, teamMembers, projects }: Props) {
-  const [items, setItems]     = useState<Delegation[]>(initialDelegations);
-  const [filter, setFilter]   = useState("ALL");
-  const [showNew, setShowNew] = useState(false);
-  const [saving, setSaving]   = useState(false);
+const priorityCls: Record<string, string> = {
+  URGENT: "priority-urgent", HIGH: "priority-high",
+  MEDIUM: "priority-medium", LOW:  "priority-low",
+};
+
+/* ─────────────────── Add Team Member modal ─────────────────── */
+function AddMemberModal({
+  onClose, onAdded,
+}: { onClose: () => void; onAdded: (m: TeamMember) => void }) {
+  const [form, setForm]   = useState({ name: "", email: "", role: "DESIGNER", color: CLIENT_COLORS[0] });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim()) { setError("Name is required."); return; }
+    setSaving(true); setError("");
+    try {
+      const res = await fetch("/api/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        const member = await res.json();
+        onAdded(member);
+        onClose();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error ?? `Error ${res.status}`);
+      }
+    } catch { setError("Network error. Try again."); }
+    finally   { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="relative rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-slide-up"
+        style={{ background: "var(--c-surface)", border: "1px solid var(--c-border-str)" }}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-semibold" style={{ color: "var(--c-text)" }}>Add Team Member</h2>
+          <button onClick={onClose} style={{ color: "var(--c-text-muted)" }} className="hover:opacity-70">
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>Name *</label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="input" placeholder="Sarah Kim" autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>Email</label>
+            <input
+              type="email" value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="input" placeholder="sarah@studio.com"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>Role</label>
+            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="input">
+              {ROLE_OPTS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-2" style={{ color: "var(--c-text-muted)" }}>Color</label>
+            <div className="flex gap-2 flex-wrap">
+              {CLIENT_COLORS.map((c) => (
+                <button
+                  key={c} type="button"
+                  onClick={() => setForm({ ...form, color: c })}
+                  className="w-7 h-7 rounded-full transition-transform hover:scale-110"
+                  style={{ background: c, outline: form.color === c ? `2px solid ${c}` : "2px solid transparent", outlineOffset: "2px" }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-sm rounded-xl px-3 py-2"
+              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--c-danger)" }}>
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" disabled={saving || !form.name.trim()} className="btn-primary flex-1 disabled:opacity-60">
+              {saving ? "Adding…" : "Add Member"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────── Main component ─────────────────── */
+export function DelegationsClient({ initialDelegations, teamMembers: initialMembers, projects }: Props) {
+  const [items, setItems]       = useState<Delegation[]>(initialDelegations);
+  const [members, setMembers]   = useState<TeamMember[]>(initialMembers);
+  const [filter, setFilter]     = useState("ALL");
+  const [showNew, setShowNew]   = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [saving, setSaving]     = useState(false);
   const router = useRouter();
 
   const [form, setForm] = useState({
-    title: "", description: "", teamMemberId: teamMembers[0]?.id ?? "",
+    title: "", description: "", teamMemberId: initialMembers[0]?.id ?? "",
     priority: "MEDIUM", dueDate: "", projectId: "",
   });
 
@@ -71,7 +182,7 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
         const created = await res.json();
         setItems([created, ...items]);
         setShowNew(false);
-        setForm({ title: "", description: "", teamMemberId: teamMembers[0]?.id ?? "", priority: "MEDIUM", dueDate: "", projectId: "" });
+        setForm({ title: "", description: "", teamMemberId: members[0]?.id ?? "", priority: "MEDIUM", dueDate: "", projectId: "" });
         router.refresh();
       }
     } finally { setSaving(false); }
@@ -82,14 +193,30 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
     setItems(items.filter((i) => i.id !== id));
   }
 
-  const priorityCls: Record<string, string> = {
-    URGENT: "priority-urgent", HIGH: "priority-high", MEDIUM: "priority-medium", LOW: "priority-low",
-  };
-
   return (
     <div className="px-8 py-6">
-      {/* Filter tabs + New button */}
-      <div className="flex items-center justify-between mb-5">
+
+      {/* Empty team state */}
+      {members.length === 0 && (
+        <div
+          className="flex items-start gap-3 rounded-xl px-5 py-4 mb-6"
+          style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border-str)" }}
+        >
+          <UserPlus size={18} style={{ color: "var(--c-accent-text)", flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>No team members yet</p>
+            <p className="text-xs mt-0.5 mb-3" style={{ color: "var(--c-text-muted)" }}>
+              Add your team before assigning tasks.
+            </p>
+            <button onClick={() => setShowAddMember(true)} className="btn-primary flex items-center gap-2 text-xs py-1.5 px-3">
+              <UserPlus size={13} /> Add First Member
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Filter tabs + action buttons */}
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: "var(--c-elevated)" }}>
           {FILTER_TABS.map((t) => (
             <button
@@ -98,7 +225,7 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
               style={{
                 background: filter === t.value ? "var(--c-accent)" : "transparent",
-                color: filter === t.value ? "#fff" : "var(--c-text-muted)",
+                color:      filter === t.value ? "#fff" : "var(--c-text-muted)",
               }}
             >
               {t.label}
@@ -111,9 +238,22 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
           ))}
         </div>
 
-        <button onClick={() => setShowNew(true)} className="btn-primary flex items-center gap-2">
-          <Plus size={15} /> Assign Task
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddMember(true)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <UserPlus size={14} /> Add Member
+          </button>
+          <button
+            onClick={() => setShowNew(true)}
+            disabled={members.length === 0}
+            className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={members.length === 0 ? "Add a team member first" : undefined}
+          >
+            <Plus size={15} /> Assign Task
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -121,19 +261,16 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
         <div className="card p-12 text-center">
           <GitBranch size={32} style={{ color: "var(--c-text-faint)" }} className="mx-auto mb-3" />
           <p className="text-sm" style={{ color: "var(--c-text-muted)" }}>
-            {filter === "ALL" ? "No delegations yet" : `No ${filter.toLowerCase()} tasks`}
+            {filter === "ALL" ? "No delegations yet" : `No ${filter.toLowerCase().replace("_", " ")} tasks`}
           </p>
         </div>
       ) : (
-        <div
-          className="card overflow-hidden"
-          style={{ border: "1px solid var(--c-border)" }}
-        >
-          {/* Table header */}
+        <div className="card overflow-hidden">
+          {/* Header */}
           <div
-            className="grid gap-4 px-5 py-3 text-[10px] font-semibold uppercase tracking-widest"
+            className="hidden md:grid gap-4 px-5 py-3 text-[10px] font-semibold uppercase tracking-widest"
             style={{
-              gridTemplateColumns: "1fr 180px 120px 100px 100px 32px",
+              gridTemplateColumns: "1fr 180px 140px 100px 110px 32px",
               color: "var(--c-text-faint)",
               borderBottom: "1px solid var(--c-border)",
               background: "var(--c-elevated)",
@@ -147,38 +284,32 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
             <span />
           </div>
 
-          {/* Rows */}
           {filtered.map((item, idx) => (
             <div
               key={item.id}
               className="grid gap-4 px-5 py-4 items-center transition-colors"
               style={{
-                gridTemplateColumns: "1fr 180px 120px 100px 100px 32px",
+                gridTemplateColumns: "1fr 180px 140px 100px 110px 32px",
                 borderBottom: idx < filtered.length - 1 ? "1px solid var(--c-border)" : "none",
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = "var(--c-hover)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--c-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               {/* Title */}
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: "var(--c-text)" }}>
-                  {item.title}
-                </p>
+                <p className="text-sm font-medium truncate" style={{ color: "var(--c-text)" }}>{item.title}</p>
                 {item.description && (
-                  <p className="text-xs truncate mt-0.5" style={{ color: "var(--c-text-muted)" }}>
-                    {item.description}
-                  </p>
+                  <p className="text-xs truncate mt-0.5" style={{ color: "var(--c-text-muted)" }}>{item.description}</p>
                 )}
                 {item.dueDate && (
                   <div className="flex items-center gap-1 mt-1 text-[10px]" style={{ color: "var(--c-text-faint)" }}>
-                    <Calendar size={10} />
-                    {formatDate(item.dueDate)}
+                    <Calendar size={10} /> {formatDate(item.dueDate)}
                   </div>
                 )}
               </div>
 
-              {/* Assigned to */}
-              <div className="flex items-center gap-2">
+              {/* Assignee */}
+              <div className="flex items-center gap-2 min-w-0">
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
                   style={{ background: item.teamMember.color }}
@@ -186,9 +317,7 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
                   {getInitials(item.teamMember.name)}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: "var(--c-text)" }}>
-                    {item.teamMember.name}
-                  </p>
+                  <p className="text-xs font-medium truncate" style={{ color: "var(--c-text)" }}>{item.teamMember.name}</p>
                   <p className="text-[9px] truncate" style={{ color: "var(--c-text-faint)" }}>
                     {ROLE_LABELS[item.teamMember.role] ?? item.teamMember.role}
                   </p>
@@ -199,13 +328,8 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
               <div className="min-w-0">
                 {item.project ? (
                   <div className="flex items-center gap-1.5">
-                    <div
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: item.project.client.color }}
-                    />
-                    <span className="text-xs truncate" style={{ color: "var(--c-text-muted)" }}>
-                      {item.project.name}
-                    </span>
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.project.client.color }} />
+                    <span className="text-xs truncate" style={{ color: "var(--c-text-muted)" }}>{item.project.name}</span>
                   </div>
                 ) : (
                   <span className="text-xs" style={{ color: "var(--c-text-faint)" }}>—</span>
@@ -218,7 +342,8 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
               </span>
 
               {/* Status */}
-              <QuickStatus entity="delegation" id={item.id} current={item.status}
+              <QuickStatus
+                entity="delegation" id={item.id} current={item.status}
                 onChanged={(s) => setItems(items.map((i) => i.id === item.id ? { ...i, status: s } : i))}
               />
 
@@ -235,87 +360,88 @@ export function DelegationsClient({ initialDelegations, teamMembers, projects }:
         </div>
       )}
 
-      {/* New delegation modal */}
+      {/* ── Add Team Member modal ── */}
+      {showAddMember && (
+        <AddMemberModal
+          onClose={() => setShowAddMember(false)}
+          onAdded={(m) => {
+            setMembers([...members, m]);
+            if (!form.teamMemberId) setForm((f) => ({ ...f, teamMemberId: m.id }));
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* ── Assign Task modal ── */}
       {showNew && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowNew(false)} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowNew(false)} />
           <div
             className="relative rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-slide-up"
             style={{ background: "var(--c-surface)", border: "1px solid var(--c-border-str)" }}
           >
             <div className="flex items-center justify-between mb-5">
-              <h2 className="font-semibold" style={{ color: "var(--c-text)" }}>Assign New Task</h2>
-              <button onClick={() => setShowNew(false)} style={{ color: "var(--c-text-muted)" }}>
+              <h2 className="font-semibold" style={{ color: "var(--c-text)" }}>Assign Task</h2>
+              <button onClick={() => setShowNew(false)} style={{ color: "var(--c-text-muted)" }} className="hover:opacity-70">
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={createDelegation} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>
-                  Task title *
-                </label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>Task title *</label>
                 <input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="input" placeholder="e.g. Refine logo spacing" required
+                  className="input" placeholder="e.g. Refine logo spacing" required autoFocus
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>
-                  Description
-                </label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>Description</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className="input resize-none h-20"
-                  placeholder="Task details, context, acceptance criteria…"
+                  placeholder="Details, context, acceptance criteria…"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>
-                    Assign to *
-                  </label>
-                  <select value={form.teamMemberId} onChange={(e) => setForm({ ...form, teamMemberId: e.target.value })} className="input">
-                    {teamMembers.map((m) => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>Assign to *</label>
+                  <select
+                    value={form.teamMemberId}
+                    onChange={(e) => setForm({ ...form, teamMemberId: e.target.value })}
+                    className="input"
+                  >
+                    {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>
-                    Priority
-                  </label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>Priority</label>
                   <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="input">
-                    {PRIORITY_OPTS.map((p) => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
+                    {PRIORITY_OPTS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>
-                    Linked project
-                  </label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>Linked project</label>
                   <select value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })} className="input">
                     <option value="">None</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>{p.client.name} · {p.name}</option>
-                    ))}
+                    {projects.map((p) => <option key={p.id} value={p.id}>{p.client.name} · {p.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>
-                    Due date
-                  </label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--c-text-muted)" }}>Due date</label>
                   <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="input" />
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowNew(false)} className="btn-secondary flex-1">Cancel</button>
-                <button type="submit" disabled={saving || !form.title || !form.teamMemberId} className="btn-primary flex-1 disabled:opacity-60">
+                <button
+                  type="submit" disabled={saving || !form.title || !form.teamMemberId}
+                  className="btn-primary flex-1 disabled:opacity-60"
+                >
                   {saving ? "Assigning…" : "Assign Task"}
                 </button>
               </div>

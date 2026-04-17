@@ -41,9 +41,9 @@ export default function LoginPage() {
             <Layers size={22} className="text-white" />
           </div>
           <p className="text-xl font-bold tracking-tight" style={{ color: "var(--c-text)" }}>
-            Eyuel Mulat
+            Forma
           </p>
-          <p className="text-sm" style={{ color: "var(--c-text-muted)" }}>Creative Studio OS</p>
+          <p className="text-sm" style={{ color: "var(--c-text-muted)" }}>Creative Workflow OS</p>
         </div>
 
         {/* Card */}
@@ -99,7 +99,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs mt-6" style={{ color: "var(--c-text-faint)" }}>
-          Eyuel Mulat — Creative Studio OS v0.2
+          Forma — Creative Workflow OS v0.2
         </p>
       </div>
     </div>

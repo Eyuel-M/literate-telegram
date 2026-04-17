@@ -8,6 +8,7 @@ export async function GET() {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = (session.user as { id: string }).id;
+  if (!userId) return NextResponse.json({ error: "Session missing user id" }, { status: 401 });
 
   const clients = await prisma.client.findMany({
     where: { userId },
@@ -26,22 +27,32 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const userId = (session.user as { id: string }).id;
-  const body = await req.json();
+    const userId = (session.user as { id: string }).id;
+    if (!userId) return NextResponse.json({ error: "Session missing user id" }, { status: 401 });
 
-  const client = await prisma.client.create({
-    data: {
-      name: body.name,
-      email: body.email,
-      company: body.company,
-      color: body.color ?? "#7c3aed",
-      notes: body.notes,
-      userId,
-    },
-  });
+    const body = await req.json();
+    if (!body.name?.trim()) {
+      return NextResponse.json({ error: "Client name is required" }, { status: 400 });
+    }
 
-  return NextResponse.json(client, { status: 201 });
+    const client = await prisma.client.create({
+      data: {
+        name: body.name.trim(),
+        email:   body.email?.trim()   || null,
+        company: body.company?.trim() || null,
+        color:   body.color           ?? "#7c3aed",
+        notes:   body.notes           || null,
+        userId,
+      },
+    });
+
+    return NextResponse.json(client, { status: 201 });
+  } catch (err) {
+    console.error("[POST /api/clients]", err);
+    return NextResponse.json({ error: "Failed to create client" }, { status: 500 });
+  }
 }

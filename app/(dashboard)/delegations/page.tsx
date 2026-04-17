@@ -1,9 +1,16 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatDate, getInitials } from "@/lib/utils";
-import { GitBranch } from "lucide-react";
+import { getInitials } from "@/lib/utils";
 import { DelegationsClient } from "@/components/delegations/delegations-client";
+
+const ROLE_LABELS: Record<string, string> = {
+  SENIOR_DESIGNER: "Senior Designer",
+  JUNIOR_DESIGNER: "Junior Designer",
+  ART_DIRECTOR: "Art Director",
+  DESIGNER: "Designer",
+  MEMBER: "Member",
+};
 
 async function getData(userId: string) {
   const [delegations, teamMembers, projects] = await Promise.all([
@@ -15,9 +22,13 @@ async function getData(userId: string) {
       },
       orderBy: [{ status: "asc" }, { priority: "asc" }, { dueDate: "asc" }],
     }),
+    // ← include delegations so we can count open tasks per member
     prisma.teamMember.findMany({
       where: { userId },
-      include: { _count: { select: { delegations: true } } },
+      include: {
+        delegations: { select: { status: true } },
+      },
+      orderBy: { name: "asc" },
     }),
     prisma.project.findMany({
       where: { client: { userId } },
@@ -30,29 +41,25 @@ async function getData(userId: string) {
 }
 
 export default async function DelegationsPage() {
-  const session = await getServerSession(authOptions);
-  const userId = (session!.user as { id: string }).id;
+  const session   = await getServerSession(authOptions);
+  const userId    = (session!.user as { id: string }).id;
   const { delegations, teamMembers, projects } = await getData(userId);
 
   return (
     <div className="animate-fade-in">
       <div className="px-8 py-7" style={{ borderBottom: "1px solid var(--c-border)" }}>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--c-text)" }}>
-              Delegations
-            </h1>
-            <p className="text-sm mt-0.5" style={{ color: "var(--c-text-muted)" }}>
-              Assign and track team tasks
-            </p>
-          </div>
-        </div>
+        <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--c-text)" }}>
+          Delegations
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--c-text-muted)" }}>
+          Assign and track work across your team
+        </p>
 
-        {/* Team overview */}
+        {/* Team overview pills */}
         {teamMembers.length > 0 && (
           <div className="flex items-center gap-3 mt-5 flex-wrap">
             {teamMembers.map((m) => {
-              const active = m.delegations?.filter((d) => d.status !== "DONE").length ?? 0;
+              const open = m.delegations.filter((d) => d.status !== "DONE").length;
               return (
                 <div
                   key={m.id}
@@ -68,7 +75,12 @@ export default async function DelegationsPage() {
                   <div>
                     <p className="text-xs font-semibold" style={{ color: "var(--c-text)" }}>{m.name}</p>
                     <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>
-                      {active > 0 ? `${active} open task${active !== 1 ? "s" : ""}` : "All done"}
+                      {ROLE_LABELS[m.role] ?? m.role}
+                      {open > 0 && (
+                        <span style={{ color: "var(--c-warning)" }}>
+                          {" · "}{open} open
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -81,11 +93,13 @@ export default async function DelegationsPage() {
       <DelegationsClient
         initialDelegations={delegations.map((d) => ({
           ...d,
-          dueDate: d.dueDate?.toISOString() ?? null,
+          dueDate:   d.dueDate?.toISOString() ?? null,
           createdAt: d.createdAt.toISOString(),
           updatedAt: d.updatedAt.toISOString(),
         }))}
-        teamMembers={teamMembers}
+        teamMembers={teamMembers.map((m) => ({
+          id: m.id, name: m.name, color: m.color, role: m.role,
+        }))}
         projects={projects}
       />
     </div>

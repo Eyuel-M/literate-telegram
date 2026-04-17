@@ -52,9 +52,9 @@ export function Sidebar() {
         </div>
         <div className="min-w-0">
           <p className="text-xs font-bold tracking-tight truncate" style={{ color: "var(--c-text)" }}>
-            Eyuel Mulat
+            Forma
           </p>
-          <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>Creative Studio OS</p>
+          <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>Creative Workflow OS</p>
         </div>
       </div>
 

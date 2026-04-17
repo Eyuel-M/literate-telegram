@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Eyuel Mulat — Creative Studio OS",
+  title: "Forma — Creative Workflow OS",
   description: "Project, version, and team management built for branding designers.",
   icons: { icon: "/favicon.svg" },
 };
