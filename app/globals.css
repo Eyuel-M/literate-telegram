@@ -1,0 +1,132 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0c0c14;
+  --bg-surface: #13131f;
+  --bg-elevated: #1a1a2e;
+  --bg-hover: #1e1e32;
+  --border: #1e1e2e;
+  --border-subtle: #16161f;
+  --border-strong: #2a2a40;
+  --accent: #7c3aed;
+  --accent-light: #a78bfa;
+  --ink: #f0f0f8;
+  --ink-muted: #6b6b85;
+  --ink-faint: #3a3a50;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-faint);
+}
+
+/* Selection */
+::selection {
+  background: rgba(124, 58, 237, 0.3);
+  color: var(--ink);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Custom utilities */
+@layer components {
+  .card {
+    @apply bg-[#13131f] border border-[#1e1e2e] rounded-2xl;
+  }
+
+  .card-elevated {
+    @apply bg-[#1a1a2e] border border-[#2a2a40] rounded-2xl;
+  }
+
+  .btn-primary {
+    @apply bg-violet-700 hover:bg-violet-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-[#1a1a2e] hover:bg-[#222238] border border-[#2a2a40] text-[#f0f0f8] px-4 py-2 rounded-xl text-sm font-medium transition-colors;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-[#1a1a2e] text-[#6b6b85] hover:text-[#f0f0f8] px-3 py-2 rounded-xl text-sm font-medium transition-colors;
+  }
+
+  .input {
+    @apply bg-[#13131f] border border-[#1e1e2e] focus:border-violet-700 text-[#f0f0f8] placeholder:text-[#3a3a50] px-3 py-2 rounded-xl text-sm outline-none transition-colors w-full;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border;
+  }
+
+  .status-dot {
+    @apply w-1.5 h-1.5 rounded-full;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #13131f 25%, #1a1a2e 50%, #13131f 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

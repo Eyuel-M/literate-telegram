@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+
+  clients     Client[]
+  timeEntries TimeEntry[]
+}
+
+model Client {
+  id        String       @id @default(cuid())
+  name      String
+  email     String?
+  company   String?
+  avatar    String?
+  color     String       @default("#7c3aed")
+  status    String       @default("ACTIVE")
+  notes     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects Project[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String   @default("DISCOVERY")
+  dueDate     DateTime?
+  budget      Float?
+  color       String   @default("#7c3aed")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clientId     String
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  deliverables Deliverable[]
+  timeEntries  TimeEntry[]
+}
+
+model Deliverable {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  type        String    @default("OTHER")
+  status      String    @default("PENDING")
+  dueDate     DateTime?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  projectId   String
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions    Version[]
+  timeEntries TimeEntry[]
+}
+
+model Version {
+  id          String   @id @default(cuid())
+  number      Int
+  notes       String?
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deliverableId String
+  deliverable   Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  assets        Asset[]
+  feedback      Feedback[]
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  mimeType  String   @default("image/png")
+  size      Int?
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+
+  versionId String
+  version   Version @relation(fields: [versionId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  content   String
+  author    String
+  resolved  Boolean  @default(false)
+  xPos      Float?
+  yPos      Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versionId String
+  version   Version         @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  replies   FeedbackReply[]
+}
+
+model FeedbackReply {
+  id        String   @id @default(cuid())
+  content   String
+  author    String
+  createdAt DateTime @default(now())
+
+  feedbackId String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  description String?
+  duration    Int
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId     String?
+  project       Project?     @relation(fields: [projectId], references: [id])
+  deliverableId String?
+  deliverable   Deliverable? @relation(fields: [deliverableId], references: [id])
+}
