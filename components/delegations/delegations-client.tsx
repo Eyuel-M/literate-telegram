@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate, getInitials, CLIENT_COLORS } from "@/lib/utils";
 import { Plus, X, Calendar, Trash2, GitBranch, UserPlus, AlertCircle } from "lucide-react";
@@ -152,10 +152,18 @@ function AddMemberModal({
 }
 
 /* ─────────────────── Main component ─────────────────── */
+function dedup(list: TeamMember[]) {
+  const seen = new Set<string>();
+  return list.filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)));
+}
+
 export function DelegationsClient({ initialDelegations, teamMembers: initialMembers, projects }: Props) {
   const [items, setItems]             = useState<Delegation[]>(initialDelegations);
-  const [members, setMembers]         = useState<TeamMember[]>(initialMembers);
+  const [members, setMembers]         = useState<TeamMember[]>(() => dedup(initialMembers));
   const [filter, setFilter]           = useState("ALL");
+
+  // Sync member list from server after router.refresh()
+  useEffect(() => { setMembers(dedup(initialMembers)); }, [initialMembers]);
   const [activeMember, setActiveMember] = useState<string | null>(null);
   const [showNew, setShowNew]         = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);

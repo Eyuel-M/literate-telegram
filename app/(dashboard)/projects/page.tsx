@@ -45,7 +45,7 @@ export default async function ProjectsPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             {projects.map((project) => {
               const total = project.deliverables.length;
               const done = project.deliverables.filter((d) => d.status === "APPROVED").length;
@@ -53,7 +53,7 @@ export default async function ProjectsPage() {
               const minutes = project.timeEntries.reduce((s, e) => s + e.duration, 0);
 
               return (
-                <Link key={project.id} href={`/projects/${project.id}`}>
+                <Link key={project.id} href={`/projects/${project.id}`} className="block">
                   <div className="card p-5 hover:border-[#2a2a40] hover:bg-[#15151f] transition-all cursor-pointer group flex items-center gap-5">
                     <div
                       className="w-1 h-12 rounded-full flex-shrink-0"
