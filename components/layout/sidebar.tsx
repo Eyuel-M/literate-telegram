@@ -19,7 +19,8 @@ const adminNavItems = [
 ];
 
 const memberNavItems = [
-  { href: "/my-tasks",  icon: ListTodo,        label: "My Tasks"    },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/my-tasks",  icon: ListTodo,        label: "My Tasks"  },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
