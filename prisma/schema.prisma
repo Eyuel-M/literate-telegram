@@ -16,10 +16,11 @@ model User {
   role      String   @default("MEMBER")
   createdAt DateTime @default(now())
 
-  clients          Client[]
-  timeEntries      TimeEntry[]
-  teamMembers      TeamMember[]
-  delegationsGiven Delegation[] @relation("DelegationsGiven")
+  clients           Client[]
+  timeEntries       TimeEntry[]
+  teamMembers       TeamMember[]
+  delegationsGiven  Delegation[]  @relation("DelegationsGiven")
+  teamMemberProfile TeamMember?   @relation("LinkedUser")
 }
 
 model TeamMember {
@@ -31,9 +32,13 @@ model TeamMember {
   color     String   @default("#7c3aed")
   createdAt DateTime @default(now())
 
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  delegations Delegation[]
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delegations  Delegation[]
+
+  // Optional link to a User login account for this team member
+  linkedUserId String?      @unique
+  linkedUser   User?        @relation("LinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
 }
 
 model Delegation {

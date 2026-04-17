@@ -7,15 +7,19 @@ import { cn, getInitials } from "@/lib/utils";
 import { useTheme } from "@/components/providers/theme-provider";
 import {
   LayoutDashboard, Users, FolderOpen, Clock, Settings,
-  LogOut, Layers, GitBranch, Sun, Moon, ShieldCheck,
+  LogOut, Layers, GitBranch, Sun, Moon, ShieldCheck, ListTodo,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/clients",   icon: Users,           label: "Clients"   },
-  { href: "/projects",  icon: FolderOpen,       label: "Projects"  },
-  { href: "/delegations", icon: GitBranch,      label: "Delegations" },
-  { href: "/time",      icon: Clock,            label: "Time"      },
+const adminNavItems = [
+  { href: "/dashboard",   icon: LayoutDashboard, label: "Dashboard"   },
+  { href: "/clients",     icon: Users,           label: "Clients"     },
+  { href: "/projects",    icon: FolderOpen,      label: "Projects"    },
+  { href: "/delegations", icon: GitBranch,       label: "Delegations", badge: "TEAM" },
+  { href: "/time",        icon: Clock,           label: "Time"        },
+];
+
+const memberNavItems = [
+  { href: "/my-tasks",  icon: ListTodo,        label: "My Tasks"    },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -32,7 +36,8 @@ export function Sidebar() {
   const { data: session } = useSession();
   const { theme, toggle } = useTheme();
 
-  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
+  const isAdmin   = (session?.user as { role?: string })?.role === "ADMIN";
+  const navItems  = isAdmin ? adminNavItems : memberNavItems;
 
   return (
     <aside
@@ -60,8 +65,10 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+        {navItems.map((item) => {
+          const { href, icon: Icon, label } = item;
+          const badge  = "badge" in item ? (item as { badge?: string }).badge : undefined;
+          const active = pathname === href || (href !== "/dashboard" && href !== "/my-tasks" && pathname.startsWith(href));
           return (
             <Link
               key={href}
@@ -77,12 +84,12 @@ export function Sidebar() {
             >
               <Icon size={16} />
               {label}
-              {href === "/delegations" && (
+              {badge && (
                 <span
                   className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full font-bold"
                   style={{ background: "var(--c-accent-glow)", color: "var(--c-accent-text)" }}
                 >
-                  TEAM
+                  {badge}
                 </span>
               )}
             </Link>

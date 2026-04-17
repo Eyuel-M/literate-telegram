@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const password = await bcrypt.hash("admin2024", 12);
+  const adminPwd  = await bcrypt.hash("admin2024", 12);
+  const sarahPwd  = await bcrypt.hash("sarah2024", 12);
 
   // Admin: Eyuel Mulat
   const eyuel = await prisma.user.upsert({
@@ -13,9 +14,22 @@ async function main() {
     create: {
       email: "eyuel@studio.os",
       name: "Eyuel Mulat",
-      password,
+      password: adminPwd,
       role: "ADMIN",
       avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Eyuel",
+    },
+  });
+
+  // Member login: Sarah Kim
+  const sarahUser = await prisma.user.upsert({
+    where: { email: "sarah@studio.os" },
+    update: {},
+    create: {
+      email: "sarah@studio.os",
+      name: "Sarah Kim",
+      password: sarahPwd,
+      role: "MEMBER",
+      avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Sarah",
     },
   });
 
@@ -28,6 +42,7 @@ async function main() {
       color: "#3b82f6",
       avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Sarah",
       userId: eyuel.id,
+      linkedUserId: sarahUser.id,
     },
   });
 
@@ -401,7 +416,8 @@ async function main() {
   });
 
   console.log("✅ Database seeded successfully");
-  console.log("   Admin login: eyuel@studio.os / admin2024");
+  console.log("   Admin login : eyuel@studio.os / admin2024");
+  console.log("   Member login: sarah@studio.os / sarah2024");
   console.log("   Team: Sarah Kim, Mike Torres, Lena Park");
 }
 
