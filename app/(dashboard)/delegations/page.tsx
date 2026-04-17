@@ -3,16 +3,7 @@ export const dynamic = "force-dynamic";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getInitials } from "@/lib/utils";
 import { DelegationsClient } from "@/components/delegations/delegations-client";
-
-const ROLE_LABELS: Record<string, string> = {
-  SENIOR_DESIGNER: "Senior Designer",
-  JUNIOR_DESIGNER: "Junior Designer",
-  ART_DIRECTOR: "Art Director",
-  DESIGNER: "Designer",
-  MEMBER: "Member",
-};
 
 async function getData(userId: string) {
   const [delegations, teamMembers, projects] = await Promise.all([
@@ -24,12 +15,9 @@ async function getData(userId: string) {
       },
       orderBy: [{ status: "asc" }, { priority: "asc" }, { dueDate: "asc" }],
     }),
-    // ← include delegations so we can count open tasks per member
     prisma.teamMember.findMany({
       where: { userId },
-      include: {
-        delegations: { select: { status: true } },
-      },
+      include: { delegations: { select: { status: true } } },
       orderBy: { name: "asc" },
     }),
     prisma.project.findMany({
@@ -43,8 +31,8 @@ async function getData(userId: string) {
 }
 
 export default async function DelegationsPage() {
-  const session   = await getServerSession(authOptions);
-  const userId    = (session!.user as { id: string }).id;
+  const session = await getServerSession(authOptions);
+  const userId  = (session!.user as { id: string }).id;
   const { delegations, teamMembers, projects } = await getData(userId);
 
   return (
@@ -56,40 +44,6 @@ export default async function DelegationsPage() {
         <p className="text-sm mt-0.5" style={{ color: "var(--c-text-muted)" }}>
           Assign and track work across your team
         </p>
-
-        {/* Team overview pills */}
-        {teamMembers.length > 0 && (
-          <div className="flex items-center gap-3 mt-5 flex-wrap">
-            {teamMembers.map((m) => {
-              const open = m.delegations.filter((d) => d.status !== "DONE").length;
-              return (
-                <div
-                  key={m.id}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
-                  style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)" }}
-                >
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-                    style={{ background: m.color }}
-                  >
-                    {getInitials(m.name)}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold" style={{ color: "var(--c-text)" }}>{m.name}</p>
-                    <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>
-                      {ROLE_LABELS[m.role] ?? m.role}
-                      {open > 0 && (
-                        <span style={{ color: "var(--c-warning)" }}>
-                          {" · "}{open} open
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       <DelegationsClient
@@ -101,6 +55,7 @@ export default async function DelegationsPage() {
         }))}
         teamMembers={teamMembers.map((m) => ({
           id: m.id, name: m.name, color: m.color, role: m.role,
+          openCount: m.delegations.filter((d) => d.status !== "DONE").length,
         }))}
         projects={projects}
       />

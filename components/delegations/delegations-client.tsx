@@ -6,7 +6,7 @@ import { formatDate, getInitials, CLIENT_COLORS } from "@/lib/utils";
 import { Plus, X, Calendar, Trash2, GitBranch, UserPlus, AlertCircle } from "lucide-react";
 import { QuickStatus } from "@/components/ui/quick-status";
 
-interface TeamMember { id: string; name: string; color: string; role: string; }
+interface TeamMember { id: string; name: string; color: string; role: string; openCount?: number; }
 interface Project    { id: string; name: string; client: { name: string; color: string }; }
 interface Delegation {
   id: string; title: string; description: string | null;
@@ -153,12 +153,13 @@ function AddMemberModal({
 
 /* ─────────────────── Main component ─────────────────── */
 export function DelegationsClient({ initialDelegations, teamMembers: initialMembers, projects }: Props) {
-  const [items, setItems]       = useState<Delegation[]>(initialDelegations);
-  const [members, setMembers]   = useState<TeamMember[]>(initialMembers);
-  const [filter, setFilter]     = useState("ALL");
-  const [showNew, setShowNew]   = useState(false);
+  const [items, setItems]             = useState<Delegation[]>(initialDelegations);
+  const [members, setMembers]         = useState<TeamMember[]>(initialMembers);
+  const [filter, setFilter]           = useState("ALL");
+  const [activeMember, setActiveMember] = useState<string | null>(null);
+  const [showNew, setShowNew]         = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
-  const [saving, setSaving]     = useState(false);
+  const [saving, setSaving]           = useState(false);
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -166,7 +167,9 @@ export function DelegationsClient({ initialDelegations, teamMembers: initialMemb
     priority: "MEDIUM", dueDate: "", projectId: "",
   });
 
-  const filtered = filter === "ALL" ? items : items.filter((i) => i.status === filter);
+  const filtered = items
+    .filter((i) => activeMember === null || i.teamMember.id === activeMember)
+    .filter((i) => filter === "ALL" || i.status === filter);
 
   async function createDelegation(e: React.FormEvent) {
     e.preventDefault();
@@ -212,6 +215,58 @@ export function DelegationsClient({ initialDelegations, teamMembers: initialMemb
               <UserPlus size={13} /> Add First Member
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Member filter pills */}
+      {members.length > 0 && (
+        <div className="flex items-center gap-2 mb-5 flex-wrap">
+          <button
+            onClick={() => setActiveMember(null)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all"
+            style={{
+              background: activeMember === null ? "var(--c-accent)" : "var(--c-elevated)",
+              color:      activeMember === null ? "#fff" : "var(--c-text-muted)",
+              border:     activeMember === null ? "1px solid var(--c-accent)" : "1px solid var(--c-border)",
+            }}
+          >
+            All Members
+          </button>
+          {members.map((m) => {
+            const isActive = activeMember === m.id;
+            const open = items.filter((i) => i.teamMember.id === m.id && i.status !== "DONE").length;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setActiveMember(isActive ? null : m.id)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all"
+                style={{
+                  background: isActive ? m.color + "22" : "var(--c-elevated)",
+                  color:      isActive ? m.color : "var(--c-text-muted)",
+                  border:     isActive ? `1px solid ${m.color}66` : "1px solid var(--c-border)",
+                }}
+              >
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                  style={{ background: m.color }}
+                >
+                  {getInitials(m.name)}
+                </div>
+                {m.name}
+                {open > 0 && (
+                  <span
+                    className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold"
+                    style={{
+                      background: isActive ? m.color : "var(--c-border)",
+                      color: isActive ? "#fff" : "var(--c-text-faint)",
+                    }}
+                  >
+                    {open}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -261,7 +316,10 @@ export function DelegationsClient({ initialDelegations, teamMembers: initialMemb
         <div className="card p-12 text-center">
           <GitBranch size={32} style={{ color: "var(--c-text-faint)" }} className="mx-auto mb-3" />
           <p className="text-sm" style={{ color: "var(--c-text-muted)" }}>
-            {filter === "ALL" ? "No delegations yet" : `No ${filter.toLowerCase().replace("_", " ")} tasks`}
+            {activeMember !== null
+              ? `No ${filter === "ALL" ? "" : filter.toLowerCase().replace("_", " ") + " "}tasks for ${members.find(m => m.id === activeMember)?.name ?? "this member"}`
+              : filter === "ALL" ? "No delegations yet" : `No ${filter.toLowerCase().replace("_", " ")} tasks`
+            }
           </p>
         </div>
       ) : (

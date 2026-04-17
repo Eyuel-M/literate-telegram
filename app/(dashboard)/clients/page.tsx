@@ -7,6 +7,7 @@ import Link from "next/link";
 import { formatDuration, getInitials } from "@/lib/utils";
 import { Users } from "lucide-react";
 import { NewClientButton } from "@/components/clients/new-client-button";
+import { ClientDeleteButton } from "@/components/clients/client-delete-button";
 import { QuickStatus } from "@/components/ui/quick-status";
 
 async function getClients(userId: string) {
@@ -57,7 +58,7 @@ export default async function ClientsPage() {
               const minutes  = client.projects.reduce((s, p) => s + p.timeEntries.reduce((t, e) => t + e.duration, 0), 0);
 
               return (
-                <Link key={client.id} href={`/clients/${client.id}`}>
+                <Link key={client.id} href={`/clients/${client.id}`} className="group">
                   <div
                     className="card p-6 cursor-pointer hover:scale-[1.01] transition-transform"
                     style={{ borderTop: `3px solid ${client.color}` }}
@@ -75,7 +76,14 @@ export default async function ClientsPage() {
                           <p className="text-xs truncate mt-0.5" style={{ color: "var(--c-text-muted)" }}>{client.company}</p>
                         )}
                       </div>
-                      <QuickStatus entity="client" id={client.id} current={client.status} />
+                      <div className="flex items-center gap-1">
+                        <QuickStatus entity="client" id={client.id} current={client.status} />
+                        <ClientDeleteButton
+                          clientId={client.id}
+                          clientName={client.name}
+                          projectCount={total}
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3 text-center">
