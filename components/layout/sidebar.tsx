@@ -4,35 +4,58 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { cn, getInitials } from "@/lib/utils";
+import { useTheme } from "@/components/providers/theme-provider";
 import {
-  LayoutDashboard,
-  Users,
-  FolderOpen,
-  Clock,
-  Settings,
-  LogOut,
-  Layers,
+  LayoutDashboard, Users, FolderOpen, Clock, Settings,
+  LogOut, Layers, GitBranch, Sun, Moon, ShieldCheck,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/clients", icon: Users, label: "Clients" },
-  { href: "/projects", icon: FolderOpen, label: "Projects" },
-  { href: "/time", icon: Clock, label: "Time" },
+  { href: "/clients",   icon: Users,           label: "Clients"   },
+  { href: "/projects",  icon: FolderOpen,       label: "Projects"  },
+  { href: "/delegations", icon: GitBranch,      label: "Delegations" },
+  { href: "/time",      icon: Clock,            label: "Time"      },
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  SENIOR_DESIGNER: "Senior Designer",
+  JUNIOR_DESIGNER: "Junior Designer",
+  ART_DIRECTOR: "Art Director",
+  DESIGNER: "Designer",
+  ADMIN: "Admin",
+  MEMBER: "Member",
+};
+
 export function Sidebar() {
-  const pathname = usePathname();
+  const pathname  = usePathname();
   const { data: session } = useSession();
+  const { theme, toggle } = useTheme();
+
+  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
 
   return (
-    <aside className="w-[220px] flex-shrink-0 flex flex-col h-screen bg-[#0c0c14] border-r border-[#1e1e2e] sticky top-0">
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-[#1e1e2e]">
-        <div className="w-8 h-8 bg-violet-700 rounded-xl flex items-center justify-center flex-shrink-0">
-          <Layers size={15} className="text-white" />
+    <aside
+      className="w-[220px] flex-shrink-0 flex flex-col h-screen sticky top-0"
+      style={{ background: "var(--c-bg)", borderRight: "1px solid var(--c-border)" }}
+    >
+      {/* Logo / brand */}
+      <div
+        className="flex items-center gap-3 px-5 py-5"
+        style={{ borderBottom: "1px solid var(--c-border)" }}
+      >
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: "var(--c-accent)" }}
+        >
+          <Layers size={14} className="text-white" />
         </div>
-        <span className="font-semibold text-[#f0f0f8] tracking-tight">Forma</span>
+        <div className="min-w-0">
+          <p className="text-xs font-bold tracking-tight truncate" style={{ color: "var(--c-text)" }}>
+            Eyuel Mulat
+          </p>
+          <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>Creative Studio OS</p>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -45,46 +68,84 @@ export function Sidebar() {
               href={href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                active
-                  ? "bg-violet-700/15 text-violet-300 border border-violet-700/20"
-                  : "text-[#6b6b85] hover:text-[#f0f0f8] hover:bg-[#1a1a2e]"
               )}
+              style={{
+                background: active ? "var(--c-accent-glow)" : "transparent",
+                color: active ? "var(--c-accent-text)" : "var(--c-text-muted)",
+                border: active ? "1px solid rgba(124,58,237,0.2)" : "1px solid transparent",
+              }}
             >
-              <Icon size={16} className={active ? "text-violet-400" : ""} />
+              <Icon size={16} />
               {label}
+              {href === "/delegations" && (
+                <span
+                  className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                  style={{ background: "var(--c-accent-glow)", color: "var(--c-accent-text)" }}
+                >
+                  TEAM
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom */}
-      <div className="px-3 pb-4 border-t border-[#1e1e2e] pt-3 space-y-0.5">
+      {/* Bottom controls */}
+      <div
+        className="px-3 pb-4 pt-3 space-y-0.5"
+        style={{ borderTop: "1px solid var(--c-border)" }}
+      >
+        {/* Theme toggle */}
+        <button
+          onClick={toggle}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+          style={{ color: "var(--c-text-muted)" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--c-elevated)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--c-text)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--c-text-muted)"; }}
+        >
+          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          {theme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
+
+        {/* Settings */}
         <Link
           href="/settings"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#6b6b85] hover:text-[#f0f0f8] hover:bg-[#1a1a2e] transition-all"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+          style={{ color: "var(--c-text-muted)" }}
         >
           <Settings size={16} />
           Settings
         </Link>
 
+        {/* User card */}
         {session?.user && (
-          <div className="flex items-center gap-3 px-3 py-2.5 mt-2">
+          <div className="flex items-center gap-3 px-3 py-2.5 mt-1">
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6)" }}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 text-white"
+              style={{ background: "linear-gradient(135deg, var(--c-accent), #3b82f6)" }}
             >
-              {getInitials(session.user.name ?? "U")}
+              {getInitials(session.user.name ?? "EM")}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-[#f0f0f8] truncate">{session.user.name}</p>
-              <p className="text-xs text-[#3a3a50] truncate">{session.user.email}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-semibold truncate" style={{ color: "var(--c-text)" }}>
+                  {session.user.name}
+                </p>
+                {isAdmin && (
+                  <ShieldCheck size={11} style={{ color: "var(--c-accent-text)", flexShrink: 0 }} />
+                )}
+              </div>
+              <p className="text-[10px] truncate" style={{ color: "var(--c-text-faint)" }}>
+                {isAdmin ? "Admin" : "Member"}
+              </p>
             </div>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-[#3a3a50] hover:text-[#6b6b85] transition-colors"
               title="Sign out"
+              style={{ color: "var(--c-text-faint)" }}
+              className="hover:opacity-70 transition-opacity"
             >
-              <LogOut size={14} />
+              <LogOut size={13} />
             </button>
           </div>
         )}

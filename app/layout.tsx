@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Forma — Creative Workflow OS",
-  description: "Project and version management built for branding designers.",
+  title: "Eyuel Mulat — Creative Studio OS",
+  description: "Project, version, and team management built for branding designers.",
   icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

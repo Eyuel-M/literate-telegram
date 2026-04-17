@@ -13,23 +13,58 @@ model User {
   name      String
   password  String
   avatar    String?
+  role      String   @default("MEMBER")
   createdAt DateTime @default(now())
 
-  clients     Client[]
-  timeEntries TimeEntry[]
+  clients          Client[]
+  timeEntries      TimeEntry[]
+  teamMembers      TeamMember[]
+  delegationsGiven Delegation[] @relation("DelegationsGiven")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  role      String   @default("DESIGNER")
+  avatar    String?
+  color     String   @default("#7c3aed")
+  createdAt DateTime @default(now())
+
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delegations Delegation[]
+}
+
+model Delegation {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("PENDING")
+  priority    String    @default("MEDIUM")
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  teamMemberId String
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  assignedById String
+  assignedBy   User       @relation("DelegationsGiven", fields: [assignedById], references: [id])
+  projectId    String?
+  project      Project?   @relation(fields: [projectId], references: [id])
 }
 
 model Client {
-  id        String       @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
   email     String?
   company   String?
   avatar    String?
-  color     String       @default("#7c3aed")
-  status    String       @default("ACTIVE")
+  color     String   @default("#7c3aed")
+  status    String   @default("ACTIVE")
   notes     String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   userId   String
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -51,6 +86,7 @@ model Project {
   client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   deliverables Deliverable[]
   timeEntries  TimeEntry[]
+  delegations  Delegation[]
 }
 
 model Deliverable {
@@ -71,12 +107,12 @@ model Deliverable {
 }
 
 model Version {
-  id          String   @id @default(cuid())
-  number      Int
-  notes       String?
-  status      String   @default("DRAFT")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  number    Int
+  notes     String?
+  status    String   @default("DRAFT")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   deliverableId String
   deliverable   Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
