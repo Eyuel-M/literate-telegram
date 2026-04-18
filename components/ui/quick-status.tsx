@@ -101,7 +101,7 @@ export function QuickStatus({ entity, id, current, onChanged }: Props) {
 
   const dropdown = open ? (
     <>
-      <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+      <div className="fixed inset-0 z-[9998]" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
       <div
         className="fixed z-[9999] rounded-xl py-1 min-w-[150px] shadow-xl animate-scale-in"
         style={{
