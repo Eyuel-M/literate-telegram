@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CLIENT_COLORS } from "@/lib/utils";
 import {
@@ -434,8 +434,17 @@ export function TemplatesClient({
   initialTemplates, projects,
 }: { initialTemplates: Template[]; projects: Project[] }) {
   const [templates, setTemplates] = useState<Template[]>(initialTemplates);
+  const [loading, setLoading]     = useState(initialTemplates.length === 0);
   const [editTarget, setEditTarget] = useState<Template | null | "new">(null);
   const [deleteTarget, setDeleteTarget] = useState<Template | null>(null);
+
+  // Always fetch fresh from the API on mount — handles stale server props
+  useEffect(() => {
+    fetch("/api/templates")
+      .then((r) => r.json())
+      .then((data: Template[]) => { setTemplates(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
   function handleSaved(t: Template) {
     setTemplates((prev) => {
@@ -451,7 +460,27 @@ export function TemplatesClient({
   return (
     <div className="px-8 py-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {templates.map((t) => (
+        {loading && Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} className="card p-5 flex flex-col gap-4 animate-pulse min-h-[220px]">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl flex-shrink-0" style={{ background: "var(--c-elevated)" }} />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 rounded-full w-3/4" style={{ background: "var(--c-elevated)" }} />
+                <div className="h-2 rounded-full w-1/4" style={{ background: "var(--c-elevated)" }} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-2 rounded-full w-full" style={{ background: "var(--c-elevated)" }} />
+              <div className="h-2 rounded-full w-5/6" style={{ background: "var(--c-elevated)" }} />
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+              {Array.from({ length: 4 }).map((_, j) => (
+                <div key={j} className="h-4 rounded-md w-16" style={{ background: "var(--c-elevated)" }} />
+              ))}
+            </div>
+          </div>
+        ))}
+        {!loading && templates.map((t) => (
           <TemplateCard
             key={t.id}
             template={t}
@@ -460,8 +489,7 @@ export function TemplatesClient({
             onDelete={() => setDeleteTarget(t)}
           />
         ))}
-
-        {/* + New Template card */}
+        {/* + New Template card — always visible */}
         <button
           onClick={() => setEditTarget("new")}
           className="rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] min-h-[180px]"
