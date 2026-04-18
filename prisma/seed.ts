@@ -415,6 +415,101 @@ async function main() {
     ],
   });
 
+  // ── Preset Templates ──────────────────────────────────────
+  const presets = [
+    {
+      name: "Full Branding", icon: "Layers", color: "#7c3aed",
+      description: "Complete visual identity system from logo through brand guidelines and collateral.",
+      items: [
+        { name: "Primary Logo",          type: "LOGO",           sortOrder: 0 },
+        { name: "Secondary Logo / Mark", type: "LOGO",           sortOrder: 1 },
+        { name: "Color Palette",         type: "BRAND_IDENTITY", sortOrder: 2 },
+        { name: "Typography System",     type: "BRAND_IDENTITY", sortOrder: 3 },
+        { name: "Brand Guidelines",      type: "BRAND_IDENTITY", sortOrder: 4 },
+        { name: "Business Cards",        type: "BUSINESS_CARD",  sortOrder: 5 },
+        { name: "Letterhead",            type: "PRINT",          sortOrder: 6 },
+        { name: "Social Media Kit",      type: "SOCIAL_MEDIA",   sortOrder: 7 },
+      ],
+    },
+    {
+      name: "Logo Design", icon: "PenTool", color: "#3b82f6",
+      description: "Focused logo creation: primary mark, variations, and usage guidelines.",
+      items: [
+        { name: "Primary Logo",          type: "LOGO",           sortOrder: 0 },
+        { name: "Logomark / Icon",       type: "LOGO",           sortOrder: 1 },
+        { name: "Color Variations",      type: "LOGO",           sortOrder: 2 },
+        { name: "Black & White Version", type: "LOGO",           sortOrder: 3 },
+        { name: "Usage Guidelines",      type: "BRAND_IDENTITY", sortOrder: 4 },
+      ],
+    },
+    {
+      name: "UI/UX Design", icon: "Monitor", color: "#06b6d4",
+      description: "Full product design cycle from research and wireframes to high-fidelity UI.",
+      items: [
+        { name: "User Research",         type: "OTHER",          sortOrder: 0 },
+        { name: "Wireframes",            type: "WIREFRAME",      sortOrder: 1 },
+        { name: "UI Design",             type: "UI_UX",          sortOrder: 2 },
+        { name: "Interactive Prototype", type: "UI_UX",          sortOrder: 3 },
+        { name: "Design System",         type: "UI_UX",          sortOrder: 4 },
+        { name: "Handoff Documentation", type: "OTHER",          sortOrder: 5 },
+      ],
+    },
+    {
+      name: "Industrial Product Design", icon: "Box", color: "#f59e0b",
+      description: "Physical product design from concept sketches to production-ready specifications.",
+      items: [
+        { name: "Concept Sketches",      type: "OTHER",          sortOrder: 0 },
+        { name: "CAD / 3D Models",       type: "OTHER",          sortOrder: 1 },
+        { name: "Technical Drawings",    type: "PRINT",          sortOrder: 2 },
+        { name: "Renderings",            type: "OTHER",          sortOrder: 3 },
+        { name: "Prototype Spec",        type: "OTHER",          sortOrder: 4 },
+      ],
+    },
+    {
+      name: "Interior Design", icon: "Home", color: "#ec4899",
+      description: "Residential or commercial space design with plans, renders, and material selection.",
+      items: [
+        { name: "Floor Plan",            type: "PRINT",          sortOrder: 0 },
+        { name: "3D Renders",            type: "OTHER",          sortOrder: 1 },
+        { name: "Material Board",        type: "OTHER",          sortOrder: 2 },
+        { name: "Furniture Layout",      type: "PRINT",          sortOrder: 3 },
+        { name: "Lighting Plan",         type: "PRINT",          sortOrder: 4 },
+      ],
+    },
+    {
+      name: "Landscape Design", icon: "Trees", color: "#10b981",
+      description: "Outdoor space planning from site analysis through planting and implementation.",
+      items: [
+        { name: "Site Analysis",         type: "OTHER",          sortOrder: 0 },
+        { name: "Concept Plan",          type: "PRINT",          sortOrder: 1 },
+        { name: "Planting Plan",         type: "PRINT",          sortOrder: 2 },
+        { name: "3D Visualization",      type: "OTHER",          sortOrder: 3 },
+        { name: "Implementation Guide",  type: "PRINT",          sortOrder: 4 },
+      ],
+    },
+    {
+      name: "Packaging Design", icon: "Package", color: "#ef4444",
+      description: "Product packaging from structural dieline through final print-ready artwork.",
+      items: [
+        { name: "Dieline / Structure",   type: "OTHER",          sortOrder: 0 },
+        { name: "Label Design",          type: "PACKAGING",      sortOrder: 1 },
+        { name: "Box / Wrapper",         type: "PACKAGING",      sortOrder: 2 },
+        { name: "Mockup Renders",        type: "OTHER",          sortOrder: 3 },
+        { name: "Print-Ready Files",     type: "PRINT",          sortOrder: 4 },
+      ],
+    },
+  ];
+
+  for (const preset of presets) {
+    await prisma.template.create({
+      data: {
+        name: preset.name, icon: preset.icon, color: preset.color,
+        description: preset.description, isPreset: true, userId: eyuel.id,
+        items: { create: preset.items },
+      },
+    });
+  }
+
   console.log("✅ Database seeded successfully");
   console.log("   Admin login : eyuel@studio.os / admin2024");
   console.log("   Member login: sarah@studio.os / sarah2024");

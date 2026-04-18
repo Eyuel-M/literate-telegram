@@ -1,7 +1,7 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
-const ADMIN_PATHS = ["/clients", "/projects", "/delegations", "/time", "/settings"];
+const ADMIN_PATHS = ["/clients", "/projects", "/delegations", "/templates", "/time", "/settings"];
 
 export default withAuth(
   function middleware(req) {
@@ -33,6 +33,7 @@ export const config = {
     "/clients/:path*",
     "/projects/:path*",
     "/delegations/:path*",
+    "/templates/:path*",
     "/time/:path*",
     "/settings/:path*",
     "/my-tasks/:path*",

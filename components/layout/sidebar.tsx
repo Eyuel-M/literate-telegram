@@ -15,6 +15,7 @@ const adminNavItems = [
   { href: "/clients",     icon: Users,           label: "Clients"     },
   { href: "/projects",    icon: FolderOpen,      label: "Projects"    },
   { href: "/delegations", icon: GitBranch,       label: "Delegations", badge: "TEAM" },
+  { href: "/templates",   icon: Layers,          label: "Templates"   },
   { href: "/time",        icon: Clock,           label: "Time"        },
 ];
 
