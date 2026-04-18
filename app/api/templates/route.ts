@@ -9,7 +9,7 @@ export async function GET() {
   const userId = (session.user as { id: string }).id;
 
   const templates = await prisma.template.findMany({
-    where: { userId },
+    where: { userId, deletedAt: null },
     include: { items: { orderBy: { sortOrder: "asc" } } },
     orderBy: [{ isPreset: "desc" }, { createdAt: "asc" }],
   });

@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 async function owned(id: string, userId: string) {
-  return prisma.template.findFirst({ where: { id, userId } });
+  return prisma.template.findFirst({ where: { id, userId, deletedAt: null } });
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
@@ -46,6 +46,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const userId = (session.user as { id: string }).id;
   if (!await owned(params.id, userId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.template.delete({ where: { id: params.id } });
+  await prisma.template.update({ where: { id: params.id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ success: true });
 }

@@ -37,9 +37,9 @@ function buildWeekly(entries: { duration: number; date: Date }[]) {
 async function getAdminData(userId: string) {
   const weekAgo = new Date(Date.now() - 7 * 86400_000);
   const [clients, projects, pendingReviews, timeEntries, delegations] = await Promise.all([
-    prisma.client.count({ where: { userId, status: "ACTIVE" } }),
+    prisma.client.count({ where: { userId, status: "ACTIVE", deletedAt: null } }),
     prisma.project.findMany({
-      where: { client: { userId } },
+      where: { deletedAt: null, client: { userId, deletedAt: null } },
       include: {
         client: { select: { name: true, color: true } },
         deliverables: { select: { status: true } },
@@ -48,9 +48,9 @@ async function getAdminData(userId: string) {
       },
       orderBy: { updatedAt: "desc" },
     }),
-    prisma.deliverable.count({ where: { project: { client: { userId } }, status: "IN_REVIEW" } }),
+    prisma.deliverable.count({ where: { deletedAt: null, project: { deletedAt: null, client: { userId, deletedAt: null } }, status: "IN_REVIEW" } }),
     prisma.timeEntry.findMany({ where: { userId, date: { gte: weekAgo } }, select: { duration: true, date: true } }),
-    prisma.delegation.count({ where: { assignedBy: { id: userId }, status: { not: "DONE" } } }),
+    prisma.delegation.count({ where: { assignedBy: { id: userId }, status: { not: "DONE" }, deletedAt: null } }),
   ]);
 
   const totalWeekMinutes = timeEntries.reduce((s, e) => s + e.duration, 0);

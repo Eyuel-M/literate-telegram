@@ -8,7 +8,7 @@ import { DelegationsClient } from "@/components/delegations/delegations-client";
 async function getData(userId: string) {
   const [delegations, teamMembers, projects] = await Promise.all([
     prisma.delegation.findMany({
-      where: { assignedById: userId },
+      where: { assignedById: userId, deletedAt: null },
       include: {
         teamMember: { select: { id: true, name: true, color: true, role: true } },
         project: { select: { id: true, name: true, client: { select: { name: true, color: true } } } },
@@ -21,7 +21,7 @@ async function getData(userId: string) {
       orderBy: { name: "asc" },
     }),
     prisma.project.findMany({
-      where: { client: { userId } },
+      where: { deletedAt: null, client: { userId, deletedAt: null } },
       select: { id: true, name: true, client: { select: { name: true, color: true } } },
       orderBy: { updatedAt: "desc" },
     }),

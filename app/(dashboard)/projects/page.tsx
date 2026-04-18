@@ -9,7 +9,7 @@ import { FolderOpen, Calendar, Clock } from "lucide-react";
 
 async function getAllProjects(userId: string) {
   return prisma.project.findMany({
-    where: { client: { userId } },
+    where: { deletedAt: null, client: { userId, deletedAt: null } },
     include: {
       client: { select: { id: true, name: true, color: true } },
       deliverables: { select: { status: true } },

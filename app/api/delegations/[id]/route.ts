@@ -31,6 +31,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await prisma.delegation.delete({ where: { id: params.id } });
+  await prisma.delegation.update({ where: { id: params.id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ success: true });
 }

@@ -8,7 +8,7 @@ import { ClientsGrid } from "@/components/clients/clients-grid";
 
 async function getClients(userId: string) {
   return prisma.client.findMany({
-    where: { userId },
+    where: { userId, deletedAt: null },
     include: {
       projects: {
         include: {

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 async function getDeliverable(id: string, userId: string) {
   return prisma.deliverable.findFirst({
-    where: { id, project: { client: { userId } } },
+    where: { id, deletedAt: null, project: { deletedAt: null, client: { userId, deletedAt: null } } },
   });
 }
 
@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const userId = (session.user as { id: string }).id;
 
   const deliverable = await prisma.deliverable.findFirst({
-    where: { id: params.id, project: { client: { userId } } },
+    where: { id: params.id, deletedAt: null, project: { deletedAt: null, client: { userId, deletedAt: null } } },
     include: {
       project: {
         include: {
@@ -75,6 +75,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const existing = await getDeliverable(params.id, userId);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.deliverable.delete({ where: { id: params.id } });
+  await prisma.deliverable.update({ where: { id: params.id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ success: true });
 }

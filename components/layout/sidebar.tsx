@@ -7,7 +7,7 @@ import { cn, getInitials } from "@/lib/utils";
 import { useTheme } from "@/components/providers/theme-provider";
 import {
   LayoutDashboard, Users, FolderOpen, Clock, Settings,
-  LogOut, Layers, GitBranch, Sun, Moon, ShieldCheck, ListTodo,
+  LogOut, Layers, GitBranch, Sun, Moon, ShieldCheck, ListTodo, Archive,
 } from "lucide-react";
 
 const adminNavItems = [
@@ -17,6 +17,7 @@ const adminNavItems = [
   { href: "/delegations", icon: GitBranch,       label: "Delegations", badge: "TEAM" },
   { href: "/templates",   icon: Layers,          label: "Templates"   },
   { href: "/time",        icon: Clock,           label: "Time"        },
+  { href: "/archive",    icon: Archive,         label: "Archive"     },
 ];
 
 const memberNavItems = [

@@ -51,6 +51,7 @@ model Delegation {
   dueDate     DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   teamMemberId String
   teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
@@ -61,16 +62,17 @@ model Delegation {
 }
 
 model Client {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   email     String?
   company   String?
   avatar    String?
-  color     String   @default("#7c3aed")
-  status    String   @default("ACTIVE")
+  color     String    @default("#7c3aed")
+  status    String    @default("ACTIVE")
   notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   userId   String
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -78,15 +80,16 @@ model Client {
 }
 
 model Project {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
-  status      String   @default("DISCOVERY")
+  status      String    @default("DISCOVERY")
   dueDate     DateTime?
   budget      Float?
-  color       String   @default("#7c3aed")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  color       String    @default("#7c3aed")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   clientId     String
   client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -105,6 +108,7 @@ model Deliverable {
   sortOrder   Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   projectId   String
   project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -181,14 +185,15 @@ model TimeEntry {
 }
 
 model Template {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
-  color       String   @default("#7c3aed")
-  icon        String   @default("Layers")
-  isPreset    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  color       String    @default("#7c3aed")
+  icon        String    @default("Layers")
+  isPreset    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   userId String
   user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
