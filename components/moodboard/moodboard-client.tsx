@@ -152,8 +152,8 @@ function ItemCard({
               style={{
                 background: c.bg,
                 border: `2px solid ${c.border}`,
-                ringColor: item.label === c.key ? c.border : "transparent",
                 outline: item.label === c.key ? `2px solid ${c.border}` : "none",
+                outlineOffset: "2px",
               }}
             />
           ))}
@@ -391,7 +391,7 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
         </div>
       </div>
     </div>
-    {showChat && <AiChat onClose={() => setShowChat(false)} />}
+    {showChat && <AiChat onClose={() => setShowChat(false)} moodboardItems={items} />}
     </div>
   );
 }
