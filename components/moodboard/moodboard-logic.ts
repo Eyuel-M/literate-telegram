@@ -128,6 +128,23 @@ export function useMoodboard(clientId: string, initial: MbItem[]) {
     [clientId],
   );
 
+  /* send to back --------------------------------------------- */
+  const sendToBack = useCallback(
+    (id: string) => {
+      setItems((p) => {
+        const minZ = Math.min(0, ...p.map((i) => i.zIndex));
+        const nz   = minZ - 1;
+        fetch(`/api/clients/${clientId}/moodboard/items/${id}`, {
+          method:  "PUT",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ zIndex: nz }),
+        });
+        return p.map((i) => (i.id === id ? { ...i, zIndex: nz } : i));
+      });
+    },
+    [clientId],
+  );
+
   /* delete ------------------------------------------------------ */
   const deleteItem = useCallback(
     async (id: string) => {
@@ -146,6 +163,7 @@ export function useMoodboard(clientId: string, initial: MbItem[]) {
     savePosition,
     saveWidth,
     bringToFront,
+    sendToBack,
     deleteItem,
   };
 }

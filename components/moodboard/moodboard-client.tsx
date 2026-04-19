@@ -1,8 +1,23 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Trash2, GripHorizontal, StickyNote, ImagePlus, X, Check } from "lucide-react";
+import { StickyNote, ImagePlus, X, Check, ArrowUpToLine, ArrowDownToLine, Palette } from "lucide-react";
 import { useMoodboard, isImageUrl, uploadFile, type MbItem } from "./moodboard-logic";
+
+/* ─── Note color palette ───────────────────────────────────────── */
+
+const NOTE_COLORS: { key: string; bg: string; border: string; text: string }[] = [
+  { key: "yellow", bg: "#fef9c3", border: "#fde047", text: "#713f12" },
+  { key: "pink",   bg: "#fce7f3", border: "#f9a8d4", text: "#831843" },
+  { key: "blue",   bg: "#dbeafe", border: "#93c5fd", text: "#1e3a8a" },
+  { key: "green",  bg: "#dcfce7", border: "#86efac", text: "#14532d" },
+  { key: "purple", bg: "#ede9fe", border: "#c4b5fd", text: "#4c1d95" },
+  { key: "peach",  bg: "#ffedd5", border: "#fdba74", text: "#7c2d12" },
+];
+
+function getNoteColor(key: string | null) {
+  return NOTE_COLORS.find((c) => c.key === key) ?? NOTE_COLORS[0];
+}
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 
@@ -17,21 +32,26 @@ function canvasPos(e: React.DragEvent | React.MouseEvent, ref: React.RefObject<H
 /* ─── Item card ────────────────────────────────────────────────── */
 
 function ItemCard({
-  item, onMove, onSavePos, onBringToFront, onDelete, onUpdate, canvasRef,
+  item, onMove, onSavePos, onBringToFront, onSendToBack, onDelete, onUpdate, canvasRef,
 }: {
-  item: MbItem;
+  item:           MbItem;
   onMove:         (id: string, x: number, y: number) => void;
   onSavePos:      (id: string, x: number, y: number) => void;
   onBringToFront: (id: string) => void;
+  onSendToBack:   (id: string) => void;
   onDelete:       (id: string) => void;
   onUpdate:       (id: string, patch: { content?: string; label?: string | null }) => Promise<void>;
   canvasRef:      React.RefObject<HTMLDivElement>;
 }) {
-  const [editing, setEditing]   = useState(false);
-  const [draft,   setDraft]     = useState(item.content);
-  const [caption, setCaption]   = useState(item.label ?? "");
-  const [imgErr,  setImgErr]    = useState(false);
-  const dragging                = useRef(false);
+  const [editing,      setEditing]      = useState(false);
+  const [draft,        setDraft]        = useState(item.content);
+  const [caption,      setCaption]      = useState(item.label ?? "");
+  const [imgErr,       setImgErr]       = useState(false);
+  const [showColors,   setShowColors]   = useState(false);
+  const dragging = useRef(false);
+
+  const isNote  = item.type === "NOTE";
+  const noteCol = getNoteColor(isNote ? item.label : null);
 
   /* drag-to-move */
   function handleMouseDown(e: React.MouseEvent) {
@@ -51,9 +71,7 @@ function ItemCard({
     }
     function onMU(ev: MouseEvent) {
       dragging.current = false;
-      const nx = origX + ev.clientX - startMX;
-      const ny = origY + ev.clientY - startMY;
-      onSavePos(item.id, nx, ny);
+      onSavePos(item.id, origX + ev.clientX - startMX, origY + ev.clientY - startMY);
       document.removeEventListener("mousemove", onMM);
       document.removeEventListener("mouseup",   onMU);
     }
@@ -61,66 +79,110 @@ function ItemCard({
     document.addEventListener("mouseup",   onMU);
   }
 
-  /* save edits */
   async function saveEdit() {
     await onUpdate(item.id, {
-      content: item.type === "NOTE" ? draft : item.content,
-      label:   item.type === "IMAGE" ? caption || null : item.label,
+      content: isNote ? draft : item.content,
+      label:   isNote ? item.label : (caption || null),
     });
     setEditing(false);
   }
 
-  const isNote = item.type === "NOTE";
+  async function changeNoteColor(key: string) {
+    setShowColors(false);
+    await onUpdate(item.id, { label: key });
+  }
 
   return (
     <div
       onMouseDown={handleMouseDown}
-      style={{
-        position: "absolute",
-        left:     item.x,
-        top:      item.y,
-        width:    item.width,
-        zIndex:   item.zIndex,
-        cursor:   "grab",
-      }}
+      style={{ position: "absolute", left: item.x, top: item.y, width: item.width, zIndex: item.zIndex, cursor: "grab" }}
       className="group select-none"
     >
-      {/* drag grip */}
-      <div
-        className="absolute -top-6 left-0 right-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-2"
-        style={{ color: "var(--c-text-faint)" }}
-      >
-        <GripHorizontal size={14} />
-      </div>
-
-      {/* action buttons */}
+      {/* top action bar — visible on hover */}
       <div
         data-no-drag="1"
-        className="absolute -top-3 -right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1"
+        className="absolute -top-8 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 justify-end"
       >
+        {/* layer controls */}
+        <button
+          onClick={() => onBringToFront(item.id)}
+          title="Bring to front"
+          className="w-6 h-6 rounded-md flex items-center justify-center shadow text-white"
+          style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}
+        >
+          <ArrowUpToLine size={10} />
+        </button>
+        <button
+          onClick={() => onSendToBack(item.id)}
+          title="Send to back"
+          className="w-6 h-6 rounded-md flex items-center justify-center shadow"
+          style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}
+        >
+          <ArrowDownToLine size={10} />
+        </button>
+
+        {/* note color picker toggle */}
+        {isNote && (
+          <button
+            onClick={() => setShowColors((v) => !v)}
+            title="Change color"
+            className="w-6 h-6 rounded-md flex items-center justify-center shadow"
+            style={{ background: noteCol.bg, border: `1px solid ${noteCol.border}`, color: noteCol.text }}
+          >
+            <Palette size={10} />
+          </button>
+        )}
+
+        {/* edit */}
         {!editing && (
           <button
             onClick={() => { setDraft(item.content); setCaption(item.label ?? ""); setEditing(true); }}
-            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow"
+            className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-bold shadow"
             style={{ background: "var(--c-accent)" }}
             title="Edit"
           >✎</button>
         )}
+
+        {/* delete */}
         <button
           onClick={() => onDelete(item.id)}
-          className="w-6 h-6 rounded-full flex items-center justify-center shadow"
+          className="w-6 h-6 rounded-md flex items-center justify-center shadow"
           style={{ background: "var(--c-danger)", color: "#fff" }}
           title="Delete"
         >
-          <X size={11} />
+          <X size={10} />
         </button>
       </div>
+
+      {/* color swatch popover for notes */}
+      {isNote && showColors && (
+        <div
+          data-no-drag="1"
+          className="absolute -top-16 left-0 z-50 flex gap-1.5 p-2 rounded-xl shadow-xl"
+          style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)" }}
+        >
+          {NOTE_COLORS.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => changeNoteColor(c.key)}
+              title={c.key}
+              className="w-5 h-5 rounded-full ring-2 ring-offset-1 transition-transform hover:scale-110"
+              style={{
+                background: c.bg,
+                border: `2px solid ${c.border}`,
+                ringColor: item.label === c.key ? c.border : "transparent",
+                outline: item.label === c.key ? `2px solid ${c.border}` : "none",
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* card body */}
       {isNote ? (
         <div
           className="rounded-2xl p-4 shadow-lg min-h-[80px]"
-          style={{ background: "#fef9c3", border: "1px solid #fde047", color: "#713f12" }}
+          style={{ background: noteCol.bg, border: `1px solid ${noteCol.border}`, color: noteCol.text }}
         >
           {editing ? (
             <div data-no-drag="1" className="flex flex-col gap-2">
@@ -130,15 +192,18 @@ function ItemCard({
                 onChange={e => setDraft(e.target.value)}
                 className="w-full resize-none bg-transparent outline-none text-sm leading-relaxed"
                 rows={4}
-                style={{ color: "#713f12" }}
+                style={{ color: noteCol.text }}
               />
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setEditing(false)} className="p-1 rounded opacity-60 hover:opacity-100"><X size={12} /></button>
-                <button onClick={saveEdit} className="p-1 rounded" style={{ color: "var(--c-accent)" }}><Check size={12} /></button>
+                <button onClick={saveEdit} className="p-1 rounded" style={{ color: noteCol.text, opacity: 0.8 }}><Check size={12} /></button>
               </div>
             </div>
           ) : (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap" onDoubleClick={() => { setDraft(item.content); setEditing(true); }}>
+            <p
+              className="text-sm leading-relaxed whitespace-pre-wrap"
+              onDoubleClick={() => { setDraft(item.content); setEditing(true); }}
+            >
               {item.content || <span className="opacity-40 italic">Double-click to edit…</span>}
             </p>
           )}
@@ -188,16 +253,15 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
   const [dragOver, setDragOver] = useState(false);
   const [loading,  setLoading]  = useState<string | null>(null);
 
-  const { items, addItem, updateItem, moveItem, savePosition, bringToFront, deleteItem } =
+  const { items, addItem, updateItem, moveItem, savePosition, bringToFront, sendToBack, deleteItem } =
     useMoodboard(clientId, initialItems);
 
-  /* ── drop handler ── */
+  /* drop */
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const { x, y } = canvasPos(e, canvasRef);
 
-    /* files dragged from desktop */
     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
     if (files.length) {
       for (const file of files) {
@@ -209,21 +273,16 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
       return;
     }
 
-    /* URL dragged from browser (e.g. Pinterest image) */
     const uri = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
     if (uri) {
-      if (isImageUrl(uri)) {
-        await addItem("IMAGE", uri.trim(), null, x, y);
-      } else {
-        await addItem("NOTE", uri.trim(), null, x, y);
-      }
+      if (isImageUrl(uri)) await addItem("IMAGE", uri.trim(), null, x, y);
+      else                  await addItem("NOTE",  uri.trim(), null, x, y);
     }
   }, [addItem]);
 
-  /* ── paste handler ── */
+  /* paste */
   useEffect(() => {
     async function onPaste(e: ClipboardEvent) {
-      /* pasted image file (screenshot, copy from browser) */
       const imgItem = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith("image/"));
       if (imgItem) {
         const file = imgItem.getAsFile();
@@ -237,27 +296,21 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
           return;
         }
       }
-
-      /* pasted text — URL or note */
       const text = e.clipboardData?.getData("text/plain")?.trim();
       if (!text) return;
       const cx = (canvasRef.current?.scrollLeft ?? 0) + 200 + Math.random() * 100;
       const cy = (canvasRef.current?.scrollTop  ?? 0) + 200 + Math.random() * 100;
-      if (isImageUrl(text)) {
-        await addItem("IMAGE", text, null, cx, cy);
-      } else {
-        await addItem("NOTE", text, null, cx, cy);
-      }
+      if (isImageUrl(text)) await addItem("IMAGE", text, null, cx, cy);
+      else                   await addItem("NOTE",  text, null, cx, cy);
     }
     document.addEventListener("paste", onPaste);
     return () => document.removeEventListener("paste", onPaste);
   }, [addItem]);
 
-  /* ── add blank note ── */
   async function addNote() {
     const cx = (canvasRef.current?.scrollLeft ?? 0) + 120 + Math.random() * 200;
     const cy = (canvasRef.current?.scrollTop  ?? 0) + 120 + Math.random() * 200;
-    await addItem("NOTE", "", null, cx, cy);
+    await addItem("NOTE", "", "yellow", cx, cy);
   }
 
   return (
@@ -295,7 +348,11 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
       <div
         ref={canvasRef}
         className="flex-1 overflow-auto relative"
-        style={{ background: "var(--c-bg)" }}
+        style={{
+          background:      "var(--c-bg)",
+          backgroundImage: "radial-gradient(circle, color-mix(in srgb, var(--c-text) 12%, transparent) 1px, transparent 1px)",
+          backgroundSize:  "28px 28px",
+        }}
         onDragOver={e => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
@@ -304,13 +361,13 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
         {dragOver && (
           <div
             className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
-            style={{ background: "rgba(124,58,237,0.08)", border: "2px dashed var(--c-accent)", borderRadius: 0 }}
+            style={{ background: "rgba(124,58,237,0.08)", border: "2px dashed var(--c-accent)" }}
           >
             <p className="text-lg font-semibold" style={{ color: "var(--c-accent-text)" }}>Drop to add to board</p>
           </div>
         )}
 
-        {/* inner canvas — large enough to work in */}
+        {/* inner canvas */}
         <div style={{ width: 4000, height: 3000, position: "relative" }}>
           {items.map(item => (
             <ItemCard
@@ -319,13 +376,13 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
               onMove={moveItem}
               onSavePos={savePosition}
               onBringToFront={bringToFront}
+              onSendToBack={sendToBack}
               onDelete={deleteItem}
               onUpdate={updateItem}
               canvasRef={canvasRef}
             />
           ))}
 
-          {/* empty state */}
           {items.length === 0 && (
             <div
               className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none"
