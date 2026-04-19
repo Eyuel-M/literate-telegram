@@ -225,11 +225,13 @@ model MoodboardItem {
   id          String   @id @default(cuid())
   moodboardId String
   moodboard   Moodboard @relation(fields: [moodboardId], references: [id], onDelete: Cascade)
-  section     String   // TYPOGRAPHY | LOGO | COLOR
-  type        String   // IMAGE | NOTE | COLOR | FONT
-  content     String
-  label       String?
-  sortOrder   Int      @default(0)
+  type        String   // IMAGE | NOTE
+  content     String   // image URL or note text
+  label       String?  // caption for images, unused for notes
+  x           Float    @default(80)
+  y           Float    @default(80)
+  width       Float    @default(300)
+  zIndex      Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

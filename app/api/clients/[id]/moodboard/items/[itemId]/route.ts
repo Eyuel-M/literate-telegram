@@ -33,8 +33,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string; 
   const updated = await prisma.moodboardItem.update({
     where: { id: params.itemId },
     data: {
-      content: body.content ?? item.content,
-      label:   body.label !== undefined ? body.label : item.label,
+      ...(body.content  !== undefined && { content: body.content }),
+      ...(body.label    !== undefined && { label:   body.label }),
+      ...(body.x        !== undefined && { x:       body.x }),
+      ...(body.y        !== undefined && { y:       body.y }),
+      ...(body.width    !== undefined && { width:   body.width }),
+      ...(body.zIndex   !== undefined && { zIndex:  body.zIndex }),
     },
   });
 

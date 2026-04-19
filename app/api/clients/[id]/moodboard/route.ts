@@ -25,13 +25,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   let moodboard = await prisma.moodboard.findUnique({
     where: { clientId: params.id },
-    include: { items: { orderBy: { sortOrder: "asc" } } },
+    include: { items: { orderBy: { zIndex: "asc" } } },
   });
 
   if (!moodboard) {
     moodboard = await prisma.moodboard.create({
       data: { clientId: params.id },
-      include: { items: { orderBy: { sortOrder: "asc" } } },
+      include: { items: { orderBy: { zIndex: "asc" } } },
     });
   }
 
@@ -54,18 +54,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     moodboard = await prisma.moodboard.create({ data: { clientId: params.id } });
   }
 
-  const count = await prisma.moodboardItem.count({
-    where: { moodboardId: moodboard.id, section: body.section },
+  const maxZ = await prisma.moodboardItem.aggregate({
+    where: { moodboardId: moodboard.id },
+    _max: { zIndex: true },
   });
 
   const item = await prisma.moodboardItem.create({
     data: {
       moodboardId: moodboard.id,
-      section:     body.section,
       type:        body.type,
       content:     body.content,
       label:       body.label ?? null,
-      sortOrder:   count,
+      x:           body.x ?? 80,
+      y:           body.y ?? 80,
+      width:       body.width ?? 300,
+      zIndex:      (maxZ._max.zIndex ?? 0) + 1,
     },
   });
 
