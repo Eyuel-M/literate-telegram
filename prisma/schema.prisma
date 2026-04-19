@@ -74,9 +74,10 @@ model Client {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  userId   String
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projects Project[]
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects  Project[]
+  moodboard Moodboard?
 }
 
 model Project {
@@ -209,4 +210,26 @@ model TemplateItem {
 
   templateId String
   template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+model Moodboard {
+  id        String          @id @default(cuid())
+  clientId  String          @unique
+  client    Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  items     MoodboardItem[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model MoodboardItem {
+  id          String   @id @default(cuid())
+  moodboardId String
+  moodboard   Moodboard @relation(fields: [moodboardId], references: [id], onDelete: Cascade)
+  section     String   // TYPOGRAPHY | LOGO | COLOR
+  type        String   // IMAGE | NOTE | COLOR | FONT
+  content     String
+  label       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
