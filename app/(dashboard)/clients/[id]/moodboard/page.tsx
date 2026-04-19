@@ -26,16 +26,15 @@ async function getData(clientId: string, userId: string, isAdmin: boolean) {
     if (!ok) return null;
   }
 
-  let moodboard = await prisma.moodboard.findUnique({
-    where: { clientId },
-    include: { items: { orderBy: { sortOrder: "asc" } } },
+  await prisma.moodboard.upsert({
+    where:  { clientId },
+    create: { clientId },
+    update: {},
   });
-  if (!moodboard) {
-    moodboard = await prisma.moodboard.create({
-      data: { clientId },
-      include: { items: { orderBy: { sortOrder: "asc" } } },
-    });
-  }
+  const moodboard = await prisma.moodboard.findUnique({
+    where:   { clientId },
+    include: { items: { orderBy: { zIndex: "asc" } } },
+  })!;
 
   const collaborators = await prisma.teamMember.findMany({
     where: { delegations: { some: { project: { clientId }, deletedAt: null } } },
@@ -55,8 +54,9 @@ export default async function MoodboardPage({ params }: { params: { id: string }
   if (!data) notFound();
 
   const { client, moodboard, collaborators } = data;
-  const items = moodboard.items.map((i) => ({
+  const items = (moodboard?.items ?? []).map((i) => ({
     ...i,
+    type:      i.type as "IMAGE" | "NOTE",
     createdAt: i.createdAt.toISOString(),
     updatedAt: i.updatedAt.toISOString(),
   }));
