@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDuration, formatDate, getInitials } from "@/lib/utils";
-import { ArrowLeft, Mail, Calendar, DollarSign, Layers } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, DollarSign, Layers, Palette } from "lucide-react";
 import { NewProjectButton } from "@/components/projects/new-project-button";
 import { QuickStatus } from "@/components/ui/quick-status";
 import { CircularProgress } from "@/components/dashboard/circular-progress";
@@ -70,7 +70,17 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               )}
             </div>
           </div>
-          <NewProjectButton clientId={client.id} />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href={`/clients/${client.id}/moodboard`}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: "var(--c-accent-glow)", color: "var(--c-accent-text)", border: "1px solid rgba(124,58,237,0.2)" }}
+            >
+              <Palette size={14} />
+              Moodboard
+            </Link>
+            <NewProjectButton clientId={client.id} />
+          </div>
         </div>
 
         {/* Stats bar */}

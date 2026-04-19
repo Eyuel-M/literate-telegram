@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatDuration, getInitials } from "@/lib/utils";
-import { Trash2, AlertTriangle, X, Users, Palette } from "lucide-react";
+import { Trash2, AlertTriangle, X, Users } from "lucide-react";
 import { NewClientButton } from "@/components/clients/new-client-button";
 import { QuickStatus } from "@/components/ui/quick-status";
 
@@ -129,30 +129,17 @@ export function ClientsGrid({ initialClients }: { initialClients: ClientData[] }
 
           return (
             <div key={client.id} className="relative group">
-              {/* Action buttons — outside the Link, no flicker */}
-              <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
-                <Link
-                  href={`/clients/${client.id}/moodboard`}
-                  onClick={e => e.stopPropagation()}
-                  className="p-1.5 rounded-lg transition-all"
-                  style={{ color: "var(--c-accent-text)", opacity: 0.45 }}
-                  title="Open moodboard"
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--c-accent-glow)"; (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.opacity = "0.45"; }}
-                >
-                  <Palette size={13} />
-                </Link>
-                <button
-                  onClick={() => setDeleteTarget(client)}
-                  className="p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                  style={{ color: "var(--c-danger)" }}
-                  title="Delete client"
-                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(239,68,68,0.1)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
+              {/* Delete button — outside the Link, no flicker */}
+              <button
+                onClick={() => setDeleteTarget(client)}
+                className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg"
+                style={{ color: "var(--c-danger)" }}
+                title="Delete client"
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(239,68,68,0.1)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              >
+                <Trash2 size={13} />
+              </button>
 
               <Link href={`/clients/${client.id}`} className="block">
                 <div
