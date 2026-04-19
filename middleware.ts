@@ -8,8 +8,9 @@ export default withAuth(
     const role     = (req.nextauth.token as { role?: string })?.role;
     const pathname = req.nextUrl.pathname;
 
-    // Non-admins blocked from admin-only pages
-    if (role !== "ADMIN" && ADMIN_PATHS.some((p) => pathname.startsWith(p))) {
+    // Non-admins blocked from admin-only pages (moodboard is exempt — access checked in the page)
+    const isMoodboard = /^\/clients\/[^/]+\/moodboard/.test(pathname);
+    if (role !== "ADMIN" && !isMoodboard && ADMIN_PATHS.some((p) => pathname.startsWith(p))) {
       return NextResponse.redirect(new URL("/my-tasks", req.url));
     }
 
