@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { StickyNote, ImagePlus, X, Check, ArrowUpToLine, ArrowDownToLine, Palette } from "lucide-react";
+import { StickyNote, ImagePlus, X, Check, Palette, BotMessageSquare } from "lucide-react";
 import { useMoodboard, isImageUrl, uploadFile, type MbItem } from "./moodboard-logic";
+import { AiChat } from "./ai-chat";
 
 /* ─── Note color palette ───────────────────────────────────────── */
 
@@ -32,13 +33,12 @@ function canvasPos(e: React.DragEvent | React.MouseEvent, ref: React.RefObject<H
 /* ─── Item card ────────────────────────────────────────────────── */
 
 function ItemCard({
-  item, onMove, onSavePos, onBringToFront, onSendToBack, onDelete, onUpdate, canvasRef,
+  item, onMove, onSavePos, onBringToFront, onDelete, onUpdate, canvasRef,
 }: {
   item:           MbItem;
   onMove:         (id: string, x: number, y: number) => void;
   onSavePos:      (id: string, x: number, y: number) => void;
   onBringToFront: (id: string) => void;
-  onSendToBack:   (id: string) => void;
   onDelete:       (id: string) => void;
   onUpdate:       (id: string, patch: { content?: string; label?: string | null }) => Promise<void>;
   canvasRef:      React.RefObject<HTMLDivElement>;
@@ -103,24 +103,6 @@ function ItemCard({
         data-no-drag="1"
         className="absolute -top-8 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 justify-end"
       >
-        {/* layer controls */}
-        <button
-          onClick={() => onBringToFront(item.id)}
-          title="Bring to front"
-          className="w-6 h-6 rounded-md flex items-center justify-center shadow text-white"
-          style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}
-        >
-          <ArrowUpToLine size={10} />
-        </button>
-        <button
-          onClick={() => onSendToBack(item.id)}
-          title="Send to back"
-          className="w-6 h-6 rounded-md flex items-center justify-center shadow"
-          style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}
-        >
-          <ArrowDownToLine size={10} />
-        </button>
-
         {/* note color picker toggle */}
         {isNote && (
           <button
@@ -252,8 +234,9 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
   const canvasRef  = useRef<HTMLDivElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [loading,  setLoading]  = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
 
-  const { items, addItem, updateItem, moveItem, savePosition, bringToFront, sendToBack, deleteItem } =
+  const { items, addItem, updateItem, moveItem, savePosition, bringToFront, deleteItem } =
     useMoodboard(clientId, initialItems);
 
   /* drop */
@@ -314,6 +297,7 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
   }
 
   return (
+    <div className="flex flex-1 overflow-hidden">
     <div className="flex flex-col flex-1 overflow-hidden">
 
       {/* toolbar */}
@@ -336,8 +320,20 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
           <ImagePlus size={12} className="inline mr-1.5 mb-0.5" />
           Drop images here · Paste a URL or screenshot · Drag from Pinterest
         </span>
+        <button
+          onClick={() => setShowChat(v => !v)}
+          className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all"
+          style={{
+            background:  showChat ? "var(--c-accent)" : "var(--c-elevated)",
+            color:       showChat ? "#fff" : "var(--c-text)",
+            border:      `1px solid ${showChat ? "var(--c-accent)" : "var(--c-border)"}`,
+          }}
+        >
+          <BotMessageSquare size={13} />
+          AI Assistant
+        </button>
         {loading && (
-          <span className="ml-auto flex items-center gap-1.5" style={{ color: "var(--c-accent-text)" }}>
+          <span className="flex items-center gap-1.5" style={{ color: "var(--c-accent-text)" }}>
             <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
             {loading}
           </span>
@@ -376,7 +372,7 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
               onMove={moveItem}
               onSavePos={savePosition}
               onBringToFront={bringToFront}
-              onSendToBack={sendToBack}
+
               onDelete={deleteItem}
               onUpdate={updateItem}
               canvasRef={canvasRef}
@@ -394,6 +390,8 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
           )}
         </div>
       </div>
+    </div>
+    {showChat && <AiChat onClose={() => setShowChat(false)} />}
     </div>
   );
 }
