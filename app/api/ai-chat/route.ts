@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
 
     /* ── Call Gemini ── */
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
     const chat = model.startChat({
       history: [
@@ -146,7 +146,10 @@ export async function POST(req: NextRequest) {
             controller.enqueue(enc.encode(chunk.text()));
           }
         } catch (streamErr) {
-          controller.enqueue(enc.encode(`\n\n[Stream error: ${streamErr instanceof Error ? streamErr.message : "unknown"}]`));
+          const raw = streamErr instanceof Error ? streamErr.message : "unknown";
+          // Extract the first sentence from verbose Gemini error messages
+          const clean = raw.split("\n")[0].replace(/\[.*?\]\s*/g, "").slice(0, 200);
+          controller.enqueue(enc.encode(`\n\n[Error: ${clean}]`));
         } finally {
           controller.close();
         }
@@ -157,7 +160,8 @@ export async function POST(req: NextRequest) {
 
   } catch (err: unknown) {
     console.error("[ai-chat] error:", err);
-    const message = err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const raw   = err instanceof Error ? err.message : "Internal server error";
+    const clean = raw.split("\n")[0].replace(/\[.*?\]\s*/g, "").slice(0, 300);
+    return NextResponse.json({ error: clean }, { status: 500 });
   }
 }
