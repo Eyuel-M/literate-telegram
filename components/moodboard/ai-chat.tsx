@@ -145,8 +145,10 @@ export function AiChat({
       });
 
       if (!res.ok || !res.body) {
-        const err = await res.json().catch(() => ({ error: "Request failed" }));
-        setMessages(prev => [...prev, { role: "assistant", content: `Error: ${err.error ?? "unknown"}` }]);
+        const text = await res.text().catch(() => "");
+        let errMsg = "Request failed";
+        try { errMsg = JSON.parse(text).error ?? errMsg; } catch { errMsg = text || errMsg; }
+        setMessages(prev => [...prev, { role: "assistant", content: `Error: ${errMsg}` }]);
         return;
       }
 
@@ -171,8 +173,12 @@ export function AiChat({
     }
   }
 
-  const noteCount  = moodboardItems.filter(i => i.type === "NOTE").length;
-  const imageCount = moodboardItems.filter(i => i.type === "IMAGE").length;
+  const notes       = moodboardItems.filter(i => i.type === "NOTE");
+  const uniqueImgs  = moodboardItems
+    .filter(i => i.type === "IMAGE")
+    .filter((img, idx, arr) => arr.findIndex(a => a.content === img.content) === idx);
+  const noteCount   = notes.length;
+  const imageCount  = uniqueImgs.length;
 
   return (
     <div className="flex flex-col h-full w-80 flex-shrink-0" style={{ borderLeft: "1px solid var(--c-border)", background: "var(--c-bg)" }}>
