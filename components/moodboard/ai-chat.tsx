@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, X, Bot, User, Loader2, FileText, Image, FilePlus, FolderOpen, Trash2 } from "lucide-react";
+import { Send, X, Bot, User, Loader2, FileText, Image, FilePlus, FolderOpen, Trash2, ChevronDown, Check, Cloud, Monitor, Zap } from "lucide-react";
 import type { MbItem } from "./moodboard-logic";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
@@ -82,28 +82,58 @@ function fmtSize(bytes: number) {
 
 /* ─── Component ─────────────────────────────────────────────────── */
 
+const PROVIDERS = [
+  { id: "groq",   label: "Groq",   sub: "Free cloud · Llama vision", icon: Zap   },
+  { id: "ollama", label: "Ollama", sub: "Local · fully private",      icon: Monitor },
+  { id: "gemini", label: "Gemini", sub: "Google cloud",               icon: Cloud  },
+] as const;
+
+type ProviderId = "groq" | "ollama" | "gemini";
+
 export function AiChat({
   onClose,
   moodboardItems,
-  provider = "AI",
 }: {
   onClose:        () => void;
   moodboardItems: MbItem[];
-  provider?:      string;
 }) {
-  const [messages,       setMessages]       = useState<Message[]>([]);
-  const [files,          setFiles]          = useState<FilePayload[]>([]);
-  const [input,          setInput]          = useState("");
-  const [loading,        setLoading]        = useState(false);
-  const [reading,        setReading]        = useState(false);
-  const [activeProvider, setActiveProvider] = useState(provider);
+  const [messages,        setMessages]        = useState<Message[]>([]);
+  const [files,           setFiles]           = useState<FilePayload[]>([]);
+  const [input,           setInput]           = useState("");
+  const [loading,         setLoading]         = useState(false);
+  const [reading,         setReading]         = useState(false);
+  const [activeProvider,  setActiveProvider]  = useState<ProviderId | null>(null);
+  const [selectedProvider,setSelectedProvider]= useState<ProviderId | null>(null);
+  const [configured,      setConfigured]      = useState<Record<string, boolean>>({});
+  const [showProviders,   setShowProviders]   = useState(false);
+  const providerRef = useRef<HTMLDivElement>(null);
+  const bottomRef   = useRef<HTMLDivElement>(null);
+  const fileInputRef   = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch("/api/ai-chat/provider").then(r => r.json()).then(d => setActiveProvider(d.provider)).catch(() => {});
+    fetch("/api/ai-chat/provider")
+      .then(r => r.json())
+      .then(d => {
+        setActiveProvider(d.active as ProviderId);
+        setConfigured(d.configured ?? {});
+      })
+      .catch(() => {});
   }, []);
-  const bottomRef    = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
+
+  // Close provider menu on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (providerRef.current && !providerRef.current.contains(e.target as Node)) {
+        setShowProviders(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const currentProvider = selectedProvider ?? activeProvider;
+  const currentLabel    = PROVIDERS.find(p => p.id === currentProvider)?.label ?? "AI";
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -148,6 +178,7 @@ export function AiChat({
           history:        historySnapshot,
           files,
           moodboardItems,
+          provider:       currentProvider,
         }),
       });
 
@@ -195,10 +226,57 @@ export function AiChat({
         <div className="flex items-center gap-2">
           <Bot size={14} style={{ color: "var(--c-accent-text)" }} />
           <span className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>AI Assistant</span>
-          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: "var(--c-accent-glow)", color: "var(--c-accent-text)" }}>
-            {activeProvider}
-          </span>
+
+          {/* provider switcher badge */}
+          <div ref={providerRef} className="relative">
+            <button
+              onClick={() => setShowProviders(v => !v)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium transition-opacity hover:opacity-80"
+              style={{ background: "var(--c-accent-glow)", color: "var(--c-accent-text)" }}
+            >
+              {currentLabel}
+              <ChevronDown size={8} />
+            </button>
+
+            {showProviders && (
+              <div
+                className="absolute top-full left-0 mt-1 z-50 rounded-xl shadow-xl overflow-hidden"
+                style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", minWidth: 190 }}
+              >
+                {PROVIDERS.map(p => {
+                  const isAvailable = !!configured[p.id];
+                  const isSelected  = currentProvider === p.id;
+                  const Icon        = p.icon;
+                  return (
+                    <button
+                      key={p.id}
+                      disabled={!isAvailable}
+                      onClick={() => { setSelectedProvider(p.id); setShowProviders(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors"
+                      style={{
+                        background: isSelected ? "var(--c-accent-glow)" : "transparent",
+                        opacity:    isAvailable ? 1 : 0.35,
+                        cursor:     isAvailable ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      <Icon size={13} style={{ color: isSelected ? "var(--c-accent-text)" : "var(--c-text-faint)", flexShrink: 0 }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium leading-none mb-0.5" style={{ color: isSelected ? "var(--c-accent-text)" : "var(--c-text)" }}>
+                          {p.label}
+                        </p>
+                        <p className="text-[9px] leading-none" style={{ color: "var(--c-text-faint)" }}>
+                          {isAvailable ? p.sub : "not configured"}
+                        </p>
+                      </div>
+                      {isSelected && <Check size={11} style={{ color: "var(--c-accent-text)", flexShrink: 0 }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
+
         <button onClick={onClose} className="hover:opacity-70 transition-opacity" style={{ color: "var(--c-text-faint)" }}>
           <X size={14} />
         </button>

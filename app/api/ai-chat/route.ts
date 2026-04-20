@@ -29,16 +29,26 @@ interface MbItem {
 
 type Provider = "groq" | "ollama" | "gemini";
 
-function detectProvider(): Provider {
-  if (process.env.GROQ_API_KEY)   return "groq";
-  if (process.env.OLLAMA_BASE_URL) return "ollama";
-  if (process.env.GEMINI_API_KEY) return "gemini";
-  throw new Error(
+function detectProvider(preferred?: string): Provider {
+  const order: Provider[] = ["groq", "ollama", "gemini"];
+  const configured: Record<Provider, boolean> = {
+    groq:   !!process.env.GROQ_API_KEY,
+    ollama: !!process.env.OLLAMA_BASE_URL,
+    gemini: !!process.env.GEMINI_API_KEY,
+  };
+
+  // Use preferred if it's configured
+  if (preferred && configured[preferred as Provider]) return preferred as Provider;
+
+  // Otherwise fall through in default order
+  const found = order.find(p => configured[p]);
+  if (!found) throw new Error(
     "No AI provider configured. Add one of these to .env.local:\n" +
     "  GROQ_API_KEY=...       (free at console.groq.com)\n" +
-    "  OLLAMA_BASE_URL=http://localhost:11434  (local)\n" +
-    "  GEMINI_API_KEY=...     (Google AI Studio)",
+    "  OLLAMA_BASE_URL=http://localhost:11434\n" +
+    "  GEMINI_API_KEY=...",
   );
+  return found;
 }
 
 function makeOpenAIClient(): { client: OpenAI; model: string } {
@@ -132,12 +142,13 @@ export async function POST(req: NextRequest) {
       history        = [],
       files          = [] as FilePayload[],
       moodboardItems = [] as MbItem[],
+      provider:      preferredProvider,
     } = body;
 
     if (!message) return NextResponse.json({ error: "No message" }, { status: 400 });
 
     let provider: Provider;
-    try { provider = detectProvider(); }
+    try { provider = detectProvider(preferredProvider); }
     catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 500 }); }
 
     const { systemText, inlineImages } = await buildContext(files, moodboardItems);

@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  if (process.env.GROQ_API_KEY)    return NextResponse.json({ provider: "Groq" });
-  if (process.env.OLLAMA_BASE_URL) return NextResponse.json({ provider: "Ollama" });
-  if (process.env.GEMINI_API_KEY)  return NextResponse.json({ provider: "Gemini" });
-  return NextResponse.json({ provider: "Not configured" });
+  const configured: Record<string, boolean> = {
+    groq:   !!process.env.GROQ_API_KEY,
+    ollama: !!process.env.OLLAMA_BASE_URL,
+    gemini: !!process.env.GEMINI_API_KEY,
+  };
+
+  let active = "none";
+  if (configured.groq)   active = "groq";
+  else if (configured.ollama) active = "ollama";
+  else if (configured.gemini) active = "gemini";
+
+  return NextResponse.json({ active, configured });
 }
