@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from "react";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
-export type ItemType = "IMAGE" | "NOTE";
+export type ItemType = "IMAGE" | "NOTE" | "COLOR";
 
 export interface MbItem {
   id:        string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { StickyNote, ImagePlus, X, Check, Palette, BotMessageSquare } from "lucide-react";
+import { StickyNote, ImagePlus, X, Check, Palette, BotMessageSquare, Pipette } from "lucide-react";
 import { useMoodboard, isImageUrl, uploadFile, type MbItem } from "./moodboard-logic";
 import { AiChat } from "./ai-chat";
 
@@ -51,6 +51,7 @@ function ItemCard({
   const dragging = useRef(false);
 
   const isNote  = item.type === "NOTE";
+  const isColor = item.type === "COLOR";
   const noteCol = getNoteColor(isNote ? item.label : null);
 
   /* drag-to-move */
@@ -190,7 +191,46 @@ function ItemCard({
             </p>
           )}
         </div>
+      ) : isColor ? (
+        /* ── Color swatch card ── */
+        <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid var(--c-border)" }}>
+          <div style={{ background: item.content, height: 100 }} />
+          <div style={{ background: "var(--c-elevated)", padding: "10px 12px" }}>
+            {editing ? (
+              <div data-no-drag="1" className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
+                  />
+                  <span className="text-xs font-mono flex-1" style={{ color: "var(--c-text)" }}>{draft}</span>
+                </div>
+                <input
+                  autoFocus
+                  value={caption}
+                  onChange={e => setCaption(e.target.value)}
+                  placeholder="Color name…"
+                  className="w-full text-xs bg-transparent outline-none border-b pb-1"
+                  style={{ color: "var(--c-text)", borderColor: "var(--c-border)" }}
+                  onKeyDown={e => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditing(false); }}
+                />
+                <div className="flex gap-1 justify-end">
+                  <button onClick={() => setEditing(false)} style={{ color: "var(--c-text-faint)" }}><X size={12} /></button>
+                  <button onClick={saveEdit} style={{ color: "var(--c-accent-text)" }}><Check size={12} /></button>
+                </div>
+              </div>
+            ) : (
+              <div onDoubleClick={() => { setDraft(item.content); setCaption(item.label ?? ""); setEditing(true); }}>
+                <p className="text-xs font-mono font-medium" style={{ color: "var(--c-text)" }}>{item.content.toUpperCase()}</p>
+                {item.label && <p className="text-[11px] mt-0.5" style={{ color: "var(--c-text-muted)" }}>{item.label}</p>}
+              </div>
+            )}
+          </div>
+        </div>
       ) : (
+        /* ── Image card ── */
         <div className="rounded-2xl overflow-hidden shadow-lg" style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)" }}>
           {imgErr ? (
             <div className="flex items-center justify-center h-32 text-xs" style={{ color: "var(--c-text-faint)" }}>
@@ -230,11 +270,32 @@ function ItemCard({
 
 /* ─── Main board ───────────────────────────────────────────────── */
 
+const COLOR_PRESETS = [
+  "#7c3aed","#2563eb","#0891b2","#16a34a",
+  "#ca8a04","#ea580c","#dc2626","#db2777",
+  "#475569","#1c1917","#f8fafc","#e2e8f0",
+];
+
 export function MoodboardClient({ clientId, initialItems }: { clientId: string; initialItems: MbItem[] }) {
-  const canvasRef  = useRef<HTMLDivElement>(null);
-  const [dragOver, setDragOver] = useState(false);
-  const [loading,  setLoading]  = useState<string | null>(null);
-  const [showChat, setShowChat] = useState(false);
+  const canvasRef       = useRef<HTMLDivElement>(null);
+  const colorPickerRef  = useRef<HTMLDivElement>(null);
+  const [dragOver,      setDragOver]      = useState(false);
+  const [loading,       setLoading]       = useState<string | null>(null);
+  const [showChat,      setShowChat]      = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [pickerColor,   setPickerColor]   = useState("#7c3aed");
+  const [pickerName,    setPickerName]    = useState("");
+
+  // Close color picker on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
+        setShowColorPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const { items, addItem, updateItem, moveItem, savePosition, bringToFront, deleteItem } =
     useMoodboard(clientId, initialItems);
@@ -296,6 +357,14 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
     await addItem("NOTE", "", "yellow", cx, cy);
   }
 
+  async function addColor() {
+    const cx = (canvasRef.current?.scrollLeft ?? 0) + 120 + Math.random() * 200;
+    const cy = (canvasRef.current?.scrollTop  ?? 0) + 120 + Math.random() * 200;
+    await addItem("COLOR", pickerColor, pickerName.trim() || null, cx, cy);
+    setShowColorPicker(false);
+    setPickerName("");
+  }
+
   return (
     <div className="flex flex-1 overflow-hidden">
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -315,6 +384,81 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
           <StickyNote size={13} />
           Add Note
         </button>
+
+        {/* Color picker button + popover */}
+        <div ref={colorPickerRef} className="relative">
+          <button
+            onClick={() => setShowColorPicker(v => !v)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all"
+            style={{ background: "var(--c-elevated)", color: "var(--c-text)", border: "1px solid var(--c-border)" }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--c-accent)")}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--c-border)")}
+          >
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: pickerColor }} />
+            Add Color
+          </button>
+
+          {showColorPicker && (
+            <div
+              className="absolute top-full left-0 mt-2 z-50 p-4 rounded-2xl shadow-xl flex flex-col gap-3"
+              style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", minWidth: 220 }}
+            >
+              {/* Color input */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={pickerColor}
+                  onChange={e => setPickerColor(e.target.value)}
+                  className="w-10 h-10 rounded-xl cursor-pointer border-0 bg-transparent p-0.5"
+                  style={{ flexShrink: 0 }}
+                />
+                <div>
+                  <p className="text-xs font-mono font-semibold" style={{ color: "var(--c-text)" }}>
+                    {pickerColor.toUpperCase()}
+                  </p>
+                  <p className="text-[10px]" style={{ color: "var(--c-text-faint)" }}>Click swatch to pick</p>
+                </div>
+              </div>
+
+              {/* Presets */}
+              <div className="grid grid-cols-6 gap-1.5">
+                {COLOR_PRESETS.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setPickerColor(c)}
+                    title={c}
+                    className="w-7 h-7 rounded-lg transition-transform hover:scale-110"
+                    style={{
+                      background: c,
+                      border: c === pickerColor ? "2px solid var(--c-accent)" : "2px solid transparent",
+                      outline: c === pickerColor ? "2px solid var(--c-accent)" : "none",
+                      outlineOffset: "1px",
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Name input */}
+              <input
+                value={pickerName}
+                onChange={e => setPickerName(e.target.value)}
+                placeholder="Color name (optional)"
+                className="w-full text-xs px-3 py-2 rounded-lg bg-transparent outline-none"
+                style={{ color: "var(--c-text)", border: "1px solid var(--c-border)" }}
+                onKeyDown={e => e.key === "Enter" && addColor()}
+              />
+
+              <button
+                onClick={addColor}
+                className="w-full py-2 rounded-xl text-xs font-semibold text-white"
+                style={{ background: pickerColor }}
+              >
+                Add to Board
+              </button>
+            </div>
+          )}
+        </div>
+
         <span style={{ color: "var(--c-text-faint)" }}>·</span>
         <span style={{ color: "var(--c-text-faint)" }}>
           <ImagePlus size={12} className="inline mr-1.5 mb-0.5" />

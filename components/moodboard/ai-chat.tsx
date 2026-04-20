@@ -101,6 +101,29 @@ export function AiChat({
 }) {
   const storageKey = `ai-chat:${clientId}`;
 
+  const [width, setWidth] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem("ai-chat-width") || "320", 10); } catch { return 320; }
+  });
+  const widthRef = useRef(width);
+  widthRef.current = width;
+
+  function startResize(e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = widthRef.current;
+    function onMove(ev: MouseEvent) {
+      const next = Math.min(700, Math.max(280, startW + (startX - ev.clientX)));
+      setWidth(next);
+    }
+    function onUp() {
+      try { localStorage.setItem("ai-chat-width", String(widthRef.current)); } catch {}
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup",   onUp);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup",   onUp);
+  }
+
   const [messages,        setMessages]        = useState<Message[]>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -233,7 +256,17 @@ export function AiChat({
   const imageCount  = uniqueImgs.length;
 
   return (
-    <div className="flex flex-col h-full w-80 flex-shrink-0" style={{ borderLeft: "1px solid var(--c-border)", background: "var(--c-bg)" }}>
+    <div className="flex h-full flex-shrink-0" style={{ width, borderLeft: "1px solid var(--c-border)", background: "var(--c-bg)", position: "relative" }}>
+      {/* resize handle */}
+      <div
+        onMouseDown={startResize}
+        className="absolute left-0 top-0 bottom-0 z-10 flex items-center justify-center"
+        style={{ width: 6, cursor: "col-resize" }}
+        title="Drag to resize"
+      >
+        <div className="h-10 w-0.5 rounded-full opacity-0 hover:opacity-100 transition-opacity" style={{ background: "var(--c-accent)" }} />
+      </div>
+    <div className="flex flex-col flex-1 overflow-hidden">
 
       {/* header */}
       <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--c-border)" }}>
@@ -478,6 +511,7 @@ export function AiChat({
           Enter to send · Shift+Enter for newline
         </p>
       </div>
+    </div>
     </div>
   );
 }
