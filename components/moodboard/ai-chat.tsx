@@ -93,11 +93,20 @@ type ProviderId = "groq" | "ollama" | "gemini";
 export function AiChat({
   onClose,
   moodboardItems,
+  clientId,
 }: {
   onClose:        () => void;
   moodboardItems: MbItem[];
+  clientId:       string;
 }) {
-  const [messages,        setMessages]        = useState<Message[]>([]);
+  const storageKey = `ai-chat:${clientId}`;
+
+  const [messages,        setMessages]        = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? (JSON.parse(saved) as Message[]) : [];
+    } catch { return []; }
+  });
   const [files,           setFiles]           = useState<FilePayload[]>([]);
   const [input,           setInput]           = useState("");
   const [loading,         setLoading]         = useState(false);
@@ -110,6 +119,11 @@ export function AiChat({
   const bottomRef   = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+
+  // Persist messages to localStorage whenever they change
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, JSON.stringify(messages)); } catch { /* quota */ }
+  }, [messages, storageKey]);
 
   useEffect(() => {
     fetch("/api/ai-chat/provider")
@@ -277,9 +291,21 @@ export function AiChat({
           </div>
         </div>
 
-        <button onClick={onClose} className="hover:opacity-70 transition-opacity" style={{ color: "var(--c-text-faint)" }}>
-          <X size={14} />
-        </button>
+        <div className="flex items-center gap-2">
+          {messages.length > 0 && (
+            <button
+              onClick={() => { setMessages([]); localStorage.removeItem(storageKey); }}
+              title="Clear chat history"
+              className="text-[9px] px-2 py-1 rounded-lg hover:opacity-80 transition-opacity"
+              style={{ background: "var(--c-elevated)", color: "var(--c-text-faint)", border: "1px solid var(--c-border)" }}
+            >
+              Clear
+            </button>
+          )}
+          <button onClick={onClose} className="hover:opacity-70 transition-opacity" style={{ color: "var(--c-text-faint)" }}>
+            <X size={14} />
+          </button>
+        </div>
       </div>
 
       {/* moodboard context badge */}

@@ -391,7 +391,7 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
         </div>
       </div>
     </div>
-    {showChat && <AiChat onClose={() => setShowChat(false)} moodboardItems={items} />}
+    {showChat && <AiChat onClose={() => setShowChat(false)} moodboardItems={items} clientId={clientId} />}
     </div>
   );
 }
