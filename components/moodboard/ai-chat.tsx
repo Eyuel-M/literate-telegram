@@ -85,15 +85,22 @@ function fmtSize(bytes: number) {
 export function AiChat({
   onClose,
   moodboardItems,
+  provider = "AI",
 }: {
   onClose:        () => void;
   moodboardItems: MbItem[];
+  provider?:      string;
 }) {
-  const [messages,  setMessages]  = useState<Message[]>([]);
-  const [files,     setFiles]     = useState<FilePayload[]>([]);
-  const [input,     setInput]     = useState("");
-  const [loading,   setLoading]   = useState(false);
-  const [reading,   setReading]   = useState(false);
+  const [messages,       setMessages]       = useState<Message[]>([]);
+  const [files,          setFiles]          = useState<FilePayload[]>([]);
+  const [input,          setInput]          = useState("");
+  const [loading,        setLoading]        = useState(false);
+  const [reading,        setReading]        = useState(false);
+  const [activeProvider, setActiveProvider] = useState(provider);
+
+  useEffect(() => {
+    fetch("/api/ai-chat/provider").then(r => r.json()).then(d => setActiveProvider(d.provider)).catch(() => {});
+  }, []);
   const bottomRef    = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -189,7 +196,7 @@ export function AiChat({
           <Bot size={14} style={{ color: "var(--c-accent-text)" }} />
           <span className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>AI Assistant</span>
           <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: "var(--c-accent-glow)", color: "var(--c-accent-text)" }}>
-            Gemini
+            {activeProvider}
           </span>
         </div>
         <button onClick={onClose} className="hover:opacity-70 transition-opacity" style={{ color: "var(--c-text-faint)" }}>
