@@ -67,33 +67,51 @@ export function Sidebar() {
       }}
     >
       {/* Logo / brand */}
-      <div
-        className="flex items-center px-3 py-5"
-        style={{ borderBottom: "1px solid var(--c-border)", gap: collapsed ? 0 : 10, minHeight: 68 }}
-      >
+      {collapsed ? (
         <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "var(--c-accent)" }}
+          className="flex flex-col items-center gap-3 py-4"
+          style={{ borderBottom: "1px solid var(--c-border)" }}
         >
-          <Layers size={14} className="text-white" />
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: "var(--c-accent)" }}
+          >
+            <Layers size={14} className="text-white" />
+          </div>
+          <button
+            onClick={toggleCollapse}
+            title="Expand sidebar"
+            className="flex items-center justify-center w-8 h-8 rounded-xl transition-all hover:opacity-80"
+            style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text)" }}
+          >
+            <ChevronRight size={15} />
+          </button>
         </div>
-
-        {!collapsed && (
+      ) : (
+        <div
+          className="flex items-center gap-2.5 px-4 py-5"
+          style={{ borderBottom: "1px solid var(--c-border)" }}
+        >
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: "var(--c-accent)" }}
+          >
+            <Layers size={14} className="text-white" />
+          </div>
           <div className="flex-1 min-w-0 overflow-hidden">
             <p className="text-xs font-bold tracking-tight truncate" style={{ color: "var(--c-text)" }}>Forma</p>
             <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>Creative Workflow OS</p>
           </div>
-        )}
-
-        <button
-          onClick={toggleCollapse}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="flex-shrink-0 p-1 rounded-lg hover:opacity-70 transition-opacity"
-          style={{ color: "var(--c-text-faint)", marginLeft: collapsed ? "auto" : undefined }}
-        >
-          {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
-        </button>
-      </div>
+          <button
+            onClick={toggleCollapse}
+            title="Collapse sidebar"
+            className="flex-shrink-0 p-1.5 rounded-lg transition-opacity hover:opacity-60"
+            style={{ color: "var(--c-text-faint)" }}
+          >
+            <ChevronLeft size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">

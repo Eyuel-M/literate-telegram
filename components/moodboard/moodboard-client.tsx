@@ -20,6 +20,25 @@ function getNoteColor(key: string | null) {
   return NOTE_COLORS.find((c) => c.key === key) ?? NOTE_COLORS[0];
 }
 
+/* ─── Color conversion helpers ────────────────────────────────── */
+
+function hexToRgb(hex: string) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? { r: parseInt(r[1], 16), g: parseInt(r[2], 16), b: parseInt(r[3], 16) } : { r: 0, g: 0, b: 0 };
+}
+
+function rgbToCmyk(r: number, g: number, b: number) {
+  const rr = r / 255, gg = g / 255, bb = b / 255;
+  const k  = 1 - Math.max(rr, gg, bb);
+  if (k === 1) return { c: 0, m: 0, y: 0, k: 100 };
+  return {
+    c: Math.round(((1 - rr - k) / (1 - k)) * 100),
+    m: Math.round(((1 - gg - k) / (1 - k)) * 100),
+    y: Math.round(((1 - bb - k) / (1 - k)) * 100),
+    k: Math.round(k * 100),
+  };
+}
+
 /* ─── helpers ─────────────────────────────────────────────────── */
 
 function canvasPos(e: React.DragEvent | React.MouseEvent, ref: React.RefObject<HTMLDivElement>) {
@@ -82,10 +101,20 @@ function ItemCard({
 
   async function saveEdit() {
     await onUpdate(item.id, {
-      content: isNote ? draft : item.content,
-      label:   isNote ? item.label : (caption || null),
+      content: (isNote || isColor) ? draft : item.content,
+      label:   isNote ? item.label : (isColor ? null : (caption || null)),
     });
     setEditing(false);
+  }
+
+  async function openEyeDropper() {
+    if (!("EyeDropper" in window)) return;
+    try {
+      type EyeDropper = { open(): Promise<{ sRGBHex: string }> };
+      const ed = new (window as unknown as { EyeDropper: new () => EyeDropper }).EyeDropper();
+      const result = await ed.open();
+      setDraft(result.sRGBHex);
+    } catch { /* cancelled */ }
   }
 
   async function changeNoteColor(key: string) {
@@ -193,42 +222,63 @@ function ItemCard({
         </div>
       ) : isColor ? (
         /* ── Color swatch card ── */
-        <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid var(--c-border)" }}>
-          <div style={{ background: item.content, height: 100 }} />
-          <div style={{ background: "var(--c-elevated)", padding: "10px 12px" }}>
-            {editing ? (
-              <div data-no-drag="1" className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={draft}
-                    onChange={e => setDraft(e.target.value)}
-                    className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
-                  />
-                  <span className="text-xs font-mono flex-1" style={{ color: "var(--c-text)" }}>{draft}</span>
-                </div>
-                <input
-                  autoFocus
-                  value={caption}
-                  onChange={e => setCaption(e.target.value)}
-                  placeholder="Color name…"
-                  className="w-full text-xs bg-transparent outline-none border-b pb-1"
-                  style={{ color: "var(--c-text)", borderColor: "var(--c-border)" }}
-                  onKeyDown={e => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditing(false); }}
-                />
-                <div className="flex gap-1 justify-end">
-                  <button onClick={() => setEditing(false)} style={{ color: "var(--c-text-faint)" }}><X size={12} /></button>
-                  <button onClick={saveEdit} style={{ color: "var(--c-accent-text)" }}><Check size={12} /></button>
-                </div>
+        (() => {
+          const rgb  = hexToRgb(item.type === "COLOR" ? (editing ? draft : item.content) : item.content);
+          const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+          const hex  = (editing ? draft : item.content).toUpperCase();
+          return (
+            <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid var(--c-border)" }}>
+              <div style={{ background: editing ? draft : item.content, height: 110 }} />
+              <div style={{ background: "var(--c-elevated)", padding: "10px 12px" }}>
+                {editing ? (
+                  <div data-no-drag="1" className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={draft}
+                        onChange={e => setDraft(e.target.value)}
+                        className="w-9 h-9 rounded-lg cursor-pointer border-0 bg-transparent p-0.5 flex-shrink-0"
+                      />
+                      <span className="text-xs font-mono flex-1" style={{ color: "var(--c-text)" }}>{draft.toUpperCase()}</span>
+                      {"EyeDropper" in window && (
+                        <button
+                          onClick={openEyeDropper}
+                          title="Sample color from screen"
+                          className="p-1.5 rounded-lg hover:opacity-70 transition-opacity flex-shrink-0"
+                          style={{ background: "var(--c-bg)", border: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}
+                        >
+                          <Pipette size={12} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex justify-end gap-1.5">
+                      <button onClick={() => setEditing(false)} className="p-1 rounded" style={{ color: "var(--c-text-faint)" }}><X size={12} /></button>
+                      <button onClick={saveEdit} className="p-1 rounded" style={{ color: "var(--c-accent-text)" }}><Check size={12} /></button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="space-y-1"
+                    onDoubleClick={() => { setDraft(item.content); setEditing(true); }}
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[9px] font-semibold tracking-widest uppercase" style={{ color: "var(--c-text-faint)" }}>HEX</span>
+                      <span className="text-xs font-mono font-bold" style={{ color: "var(--c-text)" }}>{hex}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[9px] font-semibold tracking-widest uppercase" style={{ color: "var(--c-text-faint)" }}>RGB</span>
+                      <span className="text-[11px] font-mono" style={{ color: "var(--c-text-muted)" }}>{rgb.r} · {rgb.g} · {rgb.b}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[9px] font-semibold tracking-widest uppercase" style={{ color: "var(--c-text-faint)" }}>CMYK</span>
+                      <span className="text-[11px] font-mono" style={{ color: "var(--c-text-muted)" }}>{cmyk.c} · {cmyk.m} · {cmyk.y} · {cmyk.k}</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div onDoubleClick={() => { setDraft(item.content); setCaption(item.label ?? ""); setEditing(true); }}>
-                <p className="text-xs font-mono font-medium" style={{ color: "var(--c-text)" }}>{item.content.toUpperCase()}</p>
-                {item.label && <p className="text-[11px] mt-0.5" style={{ color: "var(--c-text-muted)" }}>{item.label}</p>}
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
+          );
+        })()
       ) : (
         /* ── Image card ── */
         <div className="rounded-2xl overflow-hidden shadow-lg" style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)" }}>
@@ -284,7 +334,6 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
   const [showChat,      setShowChat]      = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pickerColor,   setPickerColor]   = useState("#7c3aed");
-  const [pickerName,    setPickerName]    = useState("");
 
   // Close color picker on outside click
   useEffect(() => {
@@ -360,9 +409,8 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
   async function addColor() {
     const cx = (canvasRef.current?.scrollLeft ?? 0) + 120 + Math.random() * 200;
     const cy = (canvasRef.current?.scrollTop  ?? 0) + 120 + Math.random() * 200;
-    await addItem("COLOR", pickerColor, pickerName.trim() || null, cx, cy);
+    await addItem("COLOR", pickerColor, null, cx, cy);
     setShowColorPicker(false);
-    setPickerName("");
   }
 
   return (
@@ -437,16 +485,6 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
                   />
                 ))}
               </div>
-
-              {/* Name input */}
-              <input
-                value={pickerName}
-                onChange={e => setPickerName(e.target.value)}
-                placeholder="Color name (optional)"
-                className="w-full text-xs px-3 py-2 rounded-lg bg-transparent outline-none"
-                style={{ color: "var(--c-text)", border: "1px solid var(--c-border)" }}
-                onKeyDown={e => e.key === "Enter" && addColor()}
-              />
 
               <button
                 onClick={addColor}
