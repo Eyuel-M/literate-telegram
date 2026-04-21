@@ -602,36 +602,40 @@ export function ChatClient({ currentUserId }: { currentUserId: string }) {
                     className="flex gap-2.5"
                     style={{
                       flexDirection: isMine ? "row-reverse" : "row",
-                      marginTop:     prevSame ? 2 : 14,
+                      marginTop:     prevSame ? 4 : 14,
                       alignItems:    "flex-end",
                     }}
                   >
-                    {/* Avatar placeholder/icon for other users */}
+                    {/* Avatar — always shown for others */}
                     {!isMine ? (
-                      !prevSame ? (
-                        <div
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                          style={{ background: colorForId(msg.authorId), marginBottom: 2 }}
-                        >
-                          {getInitials(msg.authorName)}
-                        </div>
-                      ) : (
-                        <div className="w-7 flex-shrink-0" />
-                      )
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                        style={{ background: colorForId(msg.authorId), marginBottom: 2 }}
+                      >
+                        {getInitials(msg.authorName)}
+                      </div>
                     ) : null}
 
                     <div style={{ maxWidth: "72%", minWidth: 60 }}>
-                      {/* Name + time row (first of a run) */}
-                      {!isMine && !prevSame && (
-                        <div className="flex items-baseline gap-2 mb-1 pl-1">
-                          <span className="text-[11px] font-semibold" style={{ color: colorForId(msg.authorId) }}>
-                            {msg.authorName}
-                          </span>
-                          <span className="text-[10px]" style={{ color: "var(--c-text-faint)" }}>
-                            {formatTime(msg.createdAt)}
-                          </span>
-                        </div>
-                      )}
+                      {/* Name + time — always shown */}
+                      <div
+                        className="flex items-baseline gap-2 mb-1"
+                        style={{
+                          flexDirection: isMine ? "row-reverse" : "row",
+                          paddingLeft:   isMine ? 0 : 4,
+                          paddingRight:  isMine ? 4 : 0,
+                        }}
+                      >
+                        <span
+                          className="text-[11px] font-semibold"
+                          style={{ color: isMine ? "var(--c-accent-text)" : colorForId(msg.authorId) }}
+                        >
+                          {isMine ? "You" : msg.authorName}
+                        </span>
+                        <span className="text-[10px]" style={{ color: "var(--c-text-faint)" }}>
+                          {formatTime(msg.createdAt)}
+                        </span>
+                      </div>
 
                       <div
                         className="px-3 py-2 text-sm leading-relaxed"
@@ -649,14 +653,6 @@ export function ChatClient({ currentUserId }: { currentUserId: string }) {
                       >
                         {renderContent(msg.content, currentUserId)}
                       </div>
-
-                      {isMine && (
-                        <div className="text-right pr-1 mt-0.5">
-                          <span className="text-[10px]" style={{ color: "var(--c-text-faint)" }}>
-                            {formatTime(msg.createdAt)}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
