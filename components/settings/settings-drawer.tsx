@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { SettingsClient } from "./settings-client";
 
@@ -12,65 +13,62 @@ interface Props {
 
 export function SettingsDrawer({ open, onClose, sidebarWidth }: Props) {
   const { data: session } = useSession();
-  const drawerRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
 
-  // Close on Escape key
+  // Wait for client mount before portalling (avoids SSR mismatch)
+  useEffect(() => { setMounted(true); }, []);
+
+  // Close on Escape
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    if (open) document.addEventListener("keydown", onKey);
+    if (!open) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // Prevent body scroll while open
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [open]);
-
   const user = session?.user as { id: string; name: string; email: string; role: string } | undefined;
-  if (!user) return null;
 
-  return (
+  if (!mounted || !user) return null;
+
+  return createPortal(
     <>
-      {/* Backdrop — click to close, covers only the main content area */}
+      {/* Backdrop — only covers main content, not the sidebar */}
       <div
         onClick={onClose}
         style={{
-          position:   "fixed",
-          inset:      0,
-          left:       sidebarWidth,
-          zIndex:     40,
-          background: "rgba(0,0,0,0.45)",
-          opacity:    open ? 1 : 0,
+          position:      "fixed",
+          inset:         0,
+          left:          sidebarWidth + 460, // to the right of the drawer panel
+          zIndex:        50,
+          background:    "rgba(0,0,0,0.45)",
+          opacity:       open ? 1 : 0,
           pointerEvents: open ? "auto" : "none",
-          transition: "opacity 0.22s ease",
+          transition:    "opacity 0.22s ease",
         }}
       />
 
-      {/* Drawer panel */}
+      {/* Drawer panel — slides in right next to the sidebar */}
       <div
-        ref={drawerRef}
         style={{
-          position:   "fixed",
-          top:        0,
-          bottom:     0,
-          left:       sidebarWidth,
-          width:      460,
-          zIndex:     41,
-          background: "var(--c-bg)",
-          borderRight: "1px solid var(--c-border)",
-          boxShadow:  "4px 0 24px rgba(0,0,0,0.25)",
-          transform:  open ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.25s cubic-bezier(0.4,0,0.2,1)",
-          display:    "flex",
+          position:      "fixed",
+          top:           0,
+          bottom:        0,
+          left:          sidebarWidth,
+          width:         460,
+          zIndex:        50,
+          background:    "var(--c-bg)",
+          borderRight:   "1px solid var(--c-border)",
+          boxShadow:     "6px 0 32px rgba(0,0,0,0.22)",
+          transform:     open ? "translateX(0)" : "translateX(-100%)",
+          transition:    "transform 0.25s cubic-bezier(0.4,0,0.2,1)",
+          display:       "flex",
           flexDirection: "column",
-          overflowY:  "hidden",
+          overflow:      "hidden",
         }}
       >
         <SettingsClient user={user} onClose={onClose} />
       </div>
-    </>
+    </>,
+    document.body
   );
 }
