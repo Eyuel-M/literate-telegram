@@ -61,32 +61,42 @@ const ROLE_SHORT: Record<string, string> = {
   DESIGNER:        "Designer",
 };
 
-const MEMBER_ROLES = [
-  { value: "MEMBER",          label: "Member"          },
-  { value: "DESIGNER",        label: "Designer"        },
-  { value: "JUNIOR_DESIGNER", label: "Junior Designer" },
-  { value: "SENIOR_DESIGNER", label: "Senior Designer" },
-  { value: "ART_DIRECTOR",    label: "Art Director"    },
-];
+interface TeamMemberOption {
+  id:    string;
+  name:  string;
+  email: string | null;
+  role:  string;
+  color: string;
+}
 
 function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (u: ChatUser) => void }) {
-  const [name,     setName]     = useState("");
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [role,     setRole]     = useState("MEMBER");
-  const [showPwd,  setShowPwd]  = useState(false);
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [options,   setOptions]   = useState<TeamMemberOption[]>([]);
+  const [selected,  setSelected]  = useState<TeamMemberOption | null>(null);
+  const [open,      setOpen]      = useState(false);
+  const [password,  setPassword]  = useState("");
+  const [showPwd,   setShowPwd]   = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+  const [loading,   setLoading]   = useState(true);
+
+  useEffect(() => {
+    fetch("/api/chat/members")
+      .then(r => r.json())
+      .then((data) => { if (Array.isArray(data)) setOptions(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selected) return;
     setSaving(true);
     setError(null);
     try {
       const res  = await fetch("/api/chat/members", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ name: name.trim(), email: email.trim(), password, role }),
+        body:    JSON.stringify({ teamMemberId: selected.id, password }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to add member"); setSaving(false); return; }
@@ -108,12 +118,13 @@ function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (u
         className="w-full max-w-sm mx-4 rounded-2xl shadow-2xl"
         style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)" }}
       >
+        {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4" style={{ borderBottom: "1px solid var(--c-border)" }}>
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: "var(--c-accent-glow)" }}>
               <UserPlus size={13} style={{ color: "var(--c-accent-text)" }} />
             </div>
-            <h2 className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>Add Team Member</h2>
+            <h2 className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>Add Member to Chat</h2>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg hover:opacity-70" style={{ color: "var(--c-text-faint)" }}>
             <X size={15} />
@@ -127,64 +138,118 @@ function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (u
             </p>
           )}
 
+          {/* Team member dropdown */}
           <div>
-            <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>Full Name</label>
-            <input
-              className="input w-full"
-              placeholder="e.g. Alex Johnson"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-            />
+            <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>
+              Team Member
+            </label>
+
+            {loading ? (
+              <div className="input w-full flex items-center gap-2" style={{ color: "var(--c-text-faint)" }}>
+                <Loader2 size={12} className="animate-spin" /> Loading…
+              </div>
+            ) : options.length === 0 ? (
+              <div className="input w-full text-xs" style={{ color: "var(--c-text-faint)" }}>
+                All team members already have chat access
+              </div>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOpen(v => !v)}
+                  className="input w-full text-left flex items-center gap-2.5"
+                >
+                  {selected ? (
+                    <>
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
+                        style={{ background: selected.color }}
+                      >
+                        {getInitials(selected.name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium" style={{ color: "var(--c-text)" }}>{selected.name}</span>
+                        {selected.email && (
+                          <span className="ml-2 text-[11px]" style={{ color: "var(--c-text-faint)" }}>{selected.email}</span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-sm" style={{ color: "var(--c-text-faint)" }}>Select a team member…</span>
+                  )}
+                </button>
+
+                {open && (
+                  <div
+                    className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-xl z-10"
+                    style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", maxHeight: 200, overflowY: "auto" }}
+                  >
+                    {options.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => { setSelected(opt); setOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-all"
+                        style={{
+                          background: selected?.id === opt.id ? "var(--c-accent-glow)" : "transparent",
+                          color: "var(--c-text)",
+                        }}
+                        onMouseEnter={e => { if (selected?.id !== opt.id) e.currentTarget.style.background = "var(--c-bg)"; }}
+                        onMouseLeave={e => { if (selected?.id !== opt.id) e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <div
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                          style={{ background: opt.color }}
+                        >
+                          {getInitials(opt.name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate" style={{ color: "var(--c-text)" }}>{opt.name}</p>
+                          <p className="text-[10px] truncate" style={{ color: "var(--c-text-faint)" }}>
+                            {opt.email ?? "No email"} · {ROLE_SHORT[opt.role] ?? opt.role}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>Email</label>
-            <input
-              type="email"
-              className="input w-full"
-              placeholder="alex@studio.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>Temporary Password</label>
-            <div className="relative">
-              <input
-                type={showPwd ? "text" : "password"}
-                className="input w-full pr-9"
-                placeholder="Min. 6 characters"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                minLength={6}
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd(v => !v)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2"
-                style={{ color: "var(--c-text-faint)" }}
-              >
-                {showPwd ? <EyeOff size={13} /> : <Eye size={13} />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>Role</label>
-            <select className="input w-full" value={role} onChange={e => setRole(e.target.value)}>
-              {MEMBER_ROLES.map(r => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <p className="text-[10px]" style={{ color: "var(--c-text-faint)" }}>
-            The member will be able to log in with their email and this password.
-          </p>
+          {/* Password field — only shown when a member is selected */}
+          {selected && (
+            <>
+              <div>
+                <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>
+                  Set Login Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    className="input w-full pr-9"
+                    placeholder="Min. 6 characters"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    minLength={6}
+                    required
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(v => !v)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                    style={{ color: "var(--c-text-faint)" }}
+                  >
+                    {showPwd ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
+                </div>
+                <p className="text-[10px] mt-1" style={{ color: "var(--c-text-faint)" }}>
+                  {selected.name} will log in with <strong>{selected.email}</strong> and this password.
+                </p>
+              </div>
+            </>
+          )}
 
           <div className="flex gap-2 pt-1">
             <button
@@ -197,12 +262,12 @@ function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (u
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !selected || !password || options.length === 0}
               className="flex-1 py-2 rounded-xl text-xs font-semibold text-white flex items-center justify-center gap-1.5"
-              style={{ background: "var(--c-accent)" }}
+              style={{ background: selected && password ? "var(--c-accent)" : "var(--c-border)", color: selected && password ? "#fff" : "var(--c-text-faint)" }}
             >
               {saving ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />}
-              {saving ? "Adding…" : "Add Member"}
+              {saving ? "Adding…" : "Give Chat Access"}
             </button>
           </div>
         </form>
