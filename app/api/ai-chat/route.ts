@@ -51,22 +51,23 @@ function detectProvider(preferred?: string): Provider {
   return found;
 }
 
-function makeOpenAIClient(): { client: OpenAI; model: string } {
-  const provider = detectProvider();
+function makeOpenAIClient(provider: Provider): { client: OpenAI; model: string } {
   if (provider === "groq") {
     return {
       client: new OpenAI({
         apiKey:  process.env.GROQ_API_KEY!,
         baseURL: "https://api.groq.com/openai/v1",
       }),
-      model: process.env.GROQ_MODEL || "llama-3.2-11b-vision-preview",
+      // meta-llama/llama-4-scout supports vision + text; override with GROQ_MODEL if needed
+      model: process.env.GROQ_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct",
     };
   }
   // Ollama — OpenAI-compatible local server
+  const ollamaBase = (process.env.OLLAMA_BASE_URL || "http://localhost:11434").replace(/\/$/, "");
   return {
     client: new OpenAI({
       apiKey:  "ollama",
-      baseURL: (process.env.OLLAMA_BASE_URL || "http://localhost:11434") + "/v1",
+      baseURL: ollamaBase + "/v1",
     }),
     model: process.env.OLLAMA_MODEL || "llava",
   };
@@ -192,7 +193,7 @@ export async function POST(req: NextRequest) {
     }
 
     /* ── Groq / Ollama path (OpenAI-compatible) ── */
-    const { client, model } = makeOpenAIClient();
+    const { client, model } = makeOpenAIClient(provider);
 
     type TextPart     = { type: "text"; text: string };
     type ImagePart    = { type: "image_url"; image_url: { url: string } };
@@ -233,7 +234,10 @@ export async function POST(req: NextRequest) {
             if (text) controller.enqueue(enc.encode(text));
           }
         } catch (e) {
-          const msg = (e instanceof Error ? e.message : "error").split("\n")[0].slice(0, 200);
+          let msg = (e instanceof Error ? e.message : "error").split("\n")[0].slice(0, 300);
+          if (provider === "ollama" && (msg.includes("ECONNREFUSED") || msg.includes("fetch failed"))) {
+            msg = `Ollama is not running. Start it with: ollama serve\nThen make sure the model is pulled: ollama pull ${model}`;
+          }
           controller.enqueue(enc.encode(`\n\n[Error: ${msg}]`));
         } finally { controller.close(); }
       },

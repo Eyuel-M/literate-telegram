@@ -4,6 +4,30 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+// DELETE — revoke a member's chat access (deletes their User account, keeps TeamMember)
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const actor = session.user as { id: string; role: string };
+    if (actor.role !== "ADMIN") return NextResponse.json({ error: "Only admins can remove members" }, { status: 403 });
+
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+    // Prevent removing yourself
+    if (userId === actor.id) return NextResponse.json({ error: "Cannot remove yourself" }, { status: 400 });
+
+    await prisma.user.delete({ where: { id: userId } });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[DELETE /api/chat/members]", err);
+    return NextResponse.json({ error: "Failed to remove member" }, { status: 500 });
+  }
+}
+
 // GET — team members that don't have a login account yet
 export async function GET() {
   try {

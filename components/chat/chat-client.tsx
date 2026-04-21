@@ -301,15 +301,26 @@ function renderContent(content: string, currentUserId: string) {
 
 export function ChatClient({ currentUserId }: { currentUserId: string }) {
   const { data: session } = useSession();
-  const [messages,     setMessages]     = useState<Message[]>([]);
-  const [users,        setUsers]        = useState<ChatUser[]>([]);
-  const [input,        setInput]        = useState("");
-  const [mentionQ,     setMentionQ]     = useState<string | null>(null);
-  const [mentionIdx,   setMentionIdx]   = useState(0);
-  const [sending,      setSending]      = useState(false);
+  const [messages,      setMessages]      = useState<Message[]>([]);
+  const [users,         setUsers]         = useState<ChatUser[]>([]);
+  const [input,         setInput]         = useState("");
+  const [mentionQ,      setMentionQ]      = useState<string | null>(null);
+  const [mentionIdx,    setMentionIdx]    = useState(0);
+  const [sending,       setSending]       = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [removingId,    setRemovingId]    = useState<string | null>(null);
 
   const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
+
+  async function removeMember(userId: string) {
+    if (!confirm("Remove this member's chat access? They will no longer be able to log in.")) return;
+    setRemovingId(userId);
+    try {
+      const res = await fetch(`/api/chat/members?userId=${userId}`, { method: "DELETE" });
+      if (res.ok) setUsers(prev => prev.filter(u => u.id !== userId));
+    } catch {}
+    setRemovingId(null);
+  }
 
   const bottomRef    = useRef<HTMLDivElement>(null);
   const inputRef     = useRef<HTMLTextAreaElement>(null);
@@ -536,14 +547,16 @@ export function ChatClient({ currentUserId }: { currentUserId: string }) {
         {users.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {users.map((u) => {
-              const isMe = u.id === currentUserId;
+              const isMe      = u.id === currentUserId;
+              const isRemoving = removingId === u.id;
               return (
                 <div
                   key={u.id}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl group"
                   style={{
                     background: isMe ? "var(--c-accent-glow)" : "var(--c-elevated)",
                     border:     `1px solid ${isMe ? "rgba(124,58,237,0.3)" : "var(--c-border)"}`,
+                    opacity:    isRemoving ? 0.5 : 1,
                   }}
                 >
                   <div
@@ -563,6 +576,17 @@ export function ChatClient({ currentUserId }: { currentUserId: string }) {
                       {ROLE_SHORT[u.role] ?? u.role}
                     </p>
                   </div>
+                  {isAdmin && !isMe && (
+                    <button
+                      onClick={() => removeMember(u.id)}
+                      disabled={isRemoving}
+                      title="Remove member"
+                      className="ml-1 w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444" }}
+                    >
+                      <X size={9} />
+                    </button>
+                  )}
                 </div>
               );
             })}
