@@ -10,9 +10,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <SessionProvider>
-      <div className="flex min-h-screen" style={{ background: "var(--c-bg)" }}>
+      <div className="flex h-screen overflow-hidden" style={{ background: "var(--c-bg)" }}>
         <Sidebar />
-        <main className="flex-1 overflow-x-hidden" style={{ minWidth: 0 }}>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden" style={{ minWidth: 0 }}>
           {children}
         </main>
       </div>

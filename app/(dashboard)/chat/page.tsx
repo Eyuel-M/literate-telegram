@@ -12,7 +12,7 @@ export default async function ChatPage() {
   const userId = (session.user as { id: string }).id;
 
   return (
-    <div className="h-[calc(100vh-1px)] flex flex-col">
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       <ChatClient currentUserId={userId} />
     </div>
   );
