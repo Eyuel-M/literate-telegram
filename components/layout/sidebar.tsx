@@ -8,7 +8,7 @@ import { getInitials } from "@/lib/utils";
 import { useTheme } from "@/components/providers/theme-provider";
 import { getPlan, trialDaysLeft, type PlanKey } from "@/lib/plans";
 import {
-  LayoutDashboard, Users, FolderOpen, Clock, Settings,
+  LayoutDashboard, Users, FolderOpen, CalendarDays, Settings,
   LogOut, Layers, GitBranch, Sun, Moon, ShieldCheck, ListTodo, Archive,
   ChevronLeft, ChevronRight, MessageCircle, CreditCard, Sparkles,
 } from "lucide-react";
@@ -20,7 +20,7 @@ const adminNavItems = [
   { href: "/delegations", icon: GitBranch,       label: "Delegations", badge: "TEAM" },
   { href: "/chat",        icon: MessageCircle,   label: "Team Chat",   chat: true },
   { href: "/templates",   icon: Layers,          label: "Templates"   },
-  { href: "/time",        icon: Clock,           label: "Time"        },
+  { href: "/calendar",    icon: CalendarDays,    label: "Calendar"    },
   { href: "/archive",     icon: Archive,         label: "Archive"     },
 ];
 

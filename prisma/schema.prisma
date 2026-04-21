@@ -101,6 +101,7 @@ model Project {
   name        String
   description String?
   status      String    @default("DISCOVERY")
+  priority    String    @default("MEDIUM")  // HIGH | MEDIUM | LOW
   dueDate     DateTime?
   budget      Float?
   color       String    @default("#7c3aed")

@@ -136,6 +136,15 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                         <h3 className="font-semibold hover:underline">{project.name}</h3>
                       </Link>
                       <QuickStatus entity="project" id={project.id} current={project.status} />
+                      <span
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: project.priority === "HIGH" ? "#fef2f2" : project.priority === "LOW" ? "#f0fdf4" : "#fffbeb",
+                          color:      project.priority === "HIGH" ? "#dc2626" : project.priority === "LOW" ? "#16a34a" : "#d97706",
+                        }}
+                      >
+                        {project.priority}
+                      </span>
                     </div>
                     {project.description && (
                       <p className="text-xs mb-2 line-clamp-1" style={{ color: "var(--c-text-muted)" }}>{project.description}</p>

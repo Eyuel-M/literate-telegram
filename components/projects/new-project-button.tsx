@@ -12,6 +12,12 @@ const PROJECT_STATUSES = [
   { value: "DELIVERED", label: "Delivered" },
 ];
 
+const PROJECT_PRIORITIES = [
+  { value: "HIGH",   label: "High"   },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "LOW",    label: "Low"    },
+];
+
 interface Props {
   clientId: string;
 }
@@ -25,6 +31,7 @@ export function NewProjectButton({ clientId }: Props) {
     name: "",
     description: "",
     status: "DISCOVERY",
+    priority: "MEDIUM",
     dueDate: "",
     budget: "",
     color: CLIENT_COLORS[0],
@@ -101,6 +108,29 @@ export function NewProjectButton({ clientId }: Props) {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-xs font-medium text-[#6b6b85] mb-1.5">Priority</label>
+                  <select
+                    value={form.priority}
+                    onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                    className="input"
+                  >
+                    {PROJECT_PRIORITIES.map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#6b6b85] mb-1.5">Due date</label>
+                  <input
+                    type="date"
+                    value={form.dueDate}
+                    onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                    className="input"
+                  />
+                </div>
+                <div>
                   <label className="block text-xs font-medium text-[#6b6b85] mb-1.5">Budget ($)</label>
                   <input
                     type="number"
@@ -110,15 +140,6 @@ export function NewProjectButton({ clientId }: Props) {
                     placeholder="5000"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-[#6b6b85] mb-1.5">Due date</label>
-                <input
-                  type="date"
-                  value={form.dueDate}
-                  onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-                  className="input"
-                />
               </div>
 
               <div className="flex gap-3 pt-2">

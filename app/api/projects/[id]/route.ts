@@ -61,9 +61,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       name:        body.name,
       description: body.description,
       status:      body.status,
+      priority:    body.priority,
       color:       body.color,
       dueDate:     body.dueDate ? new Date(body.dueDate) : null,
-      budget:      body.budget  ? parseFloat(body.budget)  : null,
+      budget:      body.budget  ? parseFloat(body.budget) : null,
     },
   });
 
