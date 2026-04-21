@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Send, AtSign } from "lucide-react";
+import { Send, AtSign, UserPlus, X, Eye, EyeOff, Loader2 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 
 interface ChatUser {
@@ -61,6 +61,156 @@ const ROLE_SHORT: Record<string, string> = {
   DESIGNER:        "Designer",
 };
 
+const MEMBER_ROLES = [
+  { value: "MEMBER",          label: "Member"          },
+  { value: "DESIGNER",        label: "Designer"        },
+  { value: "JUNIOR_DESIGNER", label: "Junior Designer" },
+  { value: "SENIOR_DESIGNER", label: "Senior Designer" },
+  { value: "ART_DIRECTOR",    label: "Art Director"    },
+];
+
+function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (u: ChatUser) => void }) {
+  const [name,     setName]     = useState("");
+  const [email,    setEmail]    = useState("");
+  const [password, setPassword] = useState("");
+  const [role,     setRole]     = useState("MEMBER");
+  const [showPwd,  setShowPwd]  = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const res  = await fetch("/api/chat/members", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ name: name.trim(), email: email.trim(), password, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Failed to add member"); setSaving(false); return; }
+      onAdded(data as ChatUser);
+      onClose();
+    } catch {
+      setError("Network error");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.55)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="w-full max-w-sm mx-4 rounded-2xl shadow-2xl"
+        style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)" }}
+      >
+        <div className="flex items-center justify-between px-5 pt-5 pb-4" style={{ borderBottom: "1px solid var(--c-border)" }}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: "var(--c-accent-glow)" }}>
+              <UserPlus size={13} style={{ color: "var(--c-accent-text)" }} />
+            </div>
+            <h2 className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>Add Team Member</h2>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg hover:opacity-70" style={{ color: "var(--c-text-faint)" }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="px-5 py-4 space-y-3">
+          {error && (
+            <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>
+              {error}
+            </p>
+          )}
+
+          <div>
+            <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>Full Name</label>
+            <input
+              className="input w-full"
+              placeholder="e.g. Alex Johnson"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>Email</label>
+            <input
+              type="email"
+              className="input w-full"
+              placeholder="alex@studio.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>Temporary Password</label>
+            <div className="relative">
+              <input
+                type={showPwd ? "text" : "password"}
+                className="input w-full pr-9"
+                placeholder="Min. 6 characters"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                minLength={6}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                style={{ color: "var(--c-text-faint)" }}
+              >
+                {showPwd ? <EyeOff size={13} /> : <Eye size={13} />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium mb-1" style={{ color: "var(--c-text-muted)" }}>Role</label>
+            <select className="input w-full" value={role} onChange={e => setRole(e.target.value)}>
+              {MEMBER_ROLES.map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <p className="text-[10px]" style={{ color: "var(--c-text-faint)" }}>
+            The member will be able to log in with their email and this password.
+          </p>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 rounded-xl text-xs font-medium"
+              style={{ background: "var(--c-elevated)", color: "var(--c-text-muted)", border: "1px solid var(--c-border)" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold text-white flex items-center justify-center gap-1.5"
+              style={{ background: "var(--c-accent)" }}
+            >
+              {saving ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />}
+              {saving ? "Adding…" : "Add Member"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function renderContent(content: string, currentUserId: string) {
   const parts = content.split(/(@\[[^\]]+\]\([^)]+\))/g);
   return parts.map((part, i) => {
@@ -86,12 +236,15 @@ function renderContent(content: string, currentUserId: string) {
 
 export function ChatClient({ currentUserId }: { currentUserId: string }) {
   const { data: session } = useSession();
-  const [messages,   setMessages]   = useState<Message[]>([]);
-  const [users,      setUsers]      = useState<ChatUser[]>([]);
-  const [input,      setInput]      = useState("");
-  const [mentionQ,   setMentionQ]   = useState<string | null>(null);
-  const [mentionIdx, setMentionIdx] = useState(0);
-  const [sending,    setSending]    = useState(false);
+  const [messages,     setMessages]     = useState<Message[]>([]);
+  const [users,        setUsers]        = useState<ChatUser[]>([]);
+  const [input,        setInput]        = useState("");
+  const [mentionQ,     setMentionQ]     = useState<string | null>(null);
+  const [mentionIdx,   setMentionIdx]   = useState(0);
+  const [sending,      setSending]      = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+
+  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
 
   const bottomRef    = useRef<HTMLDivElement>(null);
   const inputRef     = useRef<HTMLTextAreaElement>(null);
@@ -272,6 +425,14 @@ export function ChatClient({ currentUserId }: { currentUserId: string }) {
   const myColor = colorForId(currentUserId);
 
   return (
+    <>
+    {showAddMember && (
+      <AddMemberModal
+        onClose={() => setShowAddMember(false)}
+        onAdded={(u) => setUsers((prev) => [...prev, u].sort((a, b) => a.name.localeCompare(b.name)))}
+      />
+    )}
+
     <div
       className="flex flex-col"
       style={{ height: "100%", background: "var(--c-bg)" }}
@@ -292,6 +453,18 @@ export function ChatClient({ currentUserId }: { currentUserId: string }) {
           <span className="text-[11px] ml-1" style={{ color: "var(--c-text-faint)" }}>
             {users.length} member{users.length !== 1 ? "s" : ""}
           </span>
+          {isAdmin && (
+            <button
+              onClick={() => setShowAddMember(true)}
+              className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all"
+              style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--c-accent)"; e.currentTarget.style.color = "var(--c-accent-text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--c-border)";  e.currentTarget.style.color = "var(--c-text-muted)"; }}
+            >
+              <UserPlus size={12} />
+              Add Member
+            </button>
+          )}
         </div>
 
         {/* Member list */}
@@ -508,5 +681,6 @@ export function ChatClient({ currentUserId }: { currentUserId: string }) {
         </p>
       </div>
     </div>
+    </>
   );
 }
