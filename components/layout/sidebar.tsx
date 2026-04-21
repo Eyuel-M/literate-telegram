@@ -17,10 +17,10 @@ const adminNavItems = [
   { href: "/clients",     icon: Users,           label: "Clients"     },
   { href: "/projects",    icon: FolderOpen,      label: "Projects"    },
   { href: "/delegations", icon: GitBranch,       label: "Delegations", badge: "TEAM" },
+  { href: "/chat",        icon: MessageCircle,   label: "Team Chat",   chat: true },
   { href: "/templates",   icon: Layers,          label: "Templates"   },
   { href: "/time",        icon: Clock,           label: "Time"        },
   { href: "/archive",     icon: Archive,         label: "Archive"     },
-  { href: "/chat",        icon: MessageCircle,   label: "Team Chat",   chat: true },
 ];
 
 const memberNavItems = [
