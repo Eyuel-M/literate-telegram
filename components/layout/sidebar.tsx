@@ -6,7 +6,6 @@ import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { getInitials } from "@/lib/utils";
 import { useTheme } from "@/components/providers/theme-provider";
-import { SettingsDrawer } from "@/components/settings/settings-drawer";
 import {
   LayoutDashboard, Users, FolderOpen, Clock, Settings,
   LogOut, Layers, GitBranch, Sun, Moon, ShieldCheck, ListTodo, Archive,
@@ -48,10 +47,7 @@ export function Sidebar() {
     try { return localStorage.getItem("sidebar-collapsed") === "true"; } catch { return false; }
   });
 
-  const [unread,       setUnread]       = useState(0);
-  const [showSettings, setShowSettings] = useState(false);
-
-  const sidebarWidth = collapsed ? 56 : 220;
+  const [unread, setUnread] = useState(0);
 
   // Poll unread mention count every 10 s
   useEffect(() => {
@@ -224,20 +220,15 @@ export function Sidebar() {
           {!collapsed && (theme === "dark" ? "Light mode" : "Dark mode")}
         </button>
 
-        <button
-          onClick={() => setShowSettings(true)}
+        <Link
+          href="/settings"
           title="Settings"
-          className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl text-sm font-medium transition-all"
-          style={{
-            color:          showSettings ? "var(--c-accent-text)" : "var(--c-text-muted)",
-            background:     showSettings ? "var(--c-accent-glow)" : "transparent",
-            justifyContent: collapsed ? "center" : "flex-start",
-            border:         showSettings ? "1px solid rgba(124,58,237,0.2)" : "1px solid transparent",
-          }}
+          className="flex items-center gap-3 px-2 py-2.5 rounded-xl text-sm font-medium transition-all"
+          style={{ color: "var(--c-text-muted)", justifyContent: collapsed ? "center" : "flex-start" }}
         >
-          <Settings size={16} style={{ flexShrink: 0 }} />
+          <Settings size={16} />
           {!collapsed && "Settings"}
-        </button>
+        </Link>
 
         {session?.user && (
           <div
@@ -279,11 +270,6 @@ export function Sidebar() {
         )}
       </div>
 
-      <SettingsDrawer
-        open={showSettings}
-        onClose={() => setShowSettings(false)}
-        sidebarWidth={sidebarWidth}
-      />
     </aside>
   );
 }

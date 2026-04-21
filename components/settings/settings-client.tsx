@@ -21,17 +21,17 @@ interface Props {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="card overflow-hidden">
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--c-border)" }}>
-        <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--c-text-faint)" }}>{title}</h2>
+      <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--c-border)" }}>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>{title}</h2>
       </div>
-      <div className="px-4 py-4 space-y-4">{children}</div>
+      <div className="px-6 py-5 space-y-5">{children}</div>
     </div>
   );
 }
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-start justify-between gap-6">
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium" style={{ color: "var(--c-text)" }}>{label}</p>
         {hint && <p className="text-[11px] mt-0.5" style={{ color: "var(--c-text-faint)" }}>{hint}</p>}
@@ -238,38 +238,23 @@ export function SettingsClient({ user, onClose }: Props) {
   };
 
   return (
-    <div className="animate-fade-in flex flex-col h-full">
+    <div className="animate-fade-in">
       {/* Header */}
-      <div
-        className="flex items-center gap-3 px-5 py-4 flex-shrink-0"
-        style={{ borderBottom: "1px solid var(--c-border)" }}
-      >
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-xl transition-opacity hover:opacity-70 flex-shrink-0"
-            style={{ background: "var(--c-elevated)", color: "var(--c-text-muted)" }}
-            title="Close settings"
-          >
-            <ArrowLeft size={15} />
-          </button>
-        )}
-        <div className="flex-1">
-          <h1 className="text-base font-bold tracking-tight" style={{ color: "var(--c-text)" }}>Settings</h1>
-          <p className="text-[11px]" style={{ color: "var(--c-text-muted)" }}>
-            Account, appearance & preferences
-          </p>
-        </div>
+      <div className="px-8 py-7" style={{ borderBottom: "1px solid var(--c-border)" }}>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--c-text)" }}>Settings</h1>
+        <p className="text-sm mt-1" style={{ color: "var(--c-text-muted)" }}>
+          Manage your account, appearance, and workspace preferences
+        </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-6 space-y-5">
+      <div className="px-8 py-8 max-w-2xl space-y-6">
 
         {/* ── Account ── */}
         <Section title="Account">
           {/* Avatar + info */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center text-base font-bold text-white flex-shrink-0"
+              className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold text-white flex-shrink-0"
               style={{ background: "linear-gradient(135deg, var(--c-accent), #3b82f6)" }}
             >
               {getInitials(user.name)}
