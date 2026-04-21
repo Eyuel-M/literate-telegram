@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useState } from "react";
-import { cn, getInitials } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { getInitials } from "@/lib/utils";
 import { useTheme } from "@/components/providers/theme-provider";
 import {
   LayoutDashboard, Users, FolderOpen, Clock, Settings,
   LogOut, Layers, GitBranch, Sun, Moon, ShieldCheck, ListTodo, Archive,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, MessageCircle,
 } from "lucide-react";
 
 const adminNavItems = [
@@ -20,11 +20,13 @@ const adminNavItems = [
   { href: "/templates",   icon: Layers,          label: "Templates"   },
   { href: "/time",        icon: Clock,           label: "Time"        },
   { href: "/archive",     icon: Archive,         label: "Archive"     },
+  { href: "/chat",        icon: MessageCircle,   label: "Team Chat",   chat: true },
 ];
 
 const memberNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/my-tasks",  icon: ListTodo,        label: "My Tasks"  },
+  { href: "/chat",      icon: MessageCircle,   label: "Team Chat", chat: true },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -44,6 +46,31 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem("sidebar-collapsed") === "true"; } catch { return false; }
   });
+
+  const [unread, setUnread] = useState(0);
+
+  // Poll unread mention count every 10 s
+  useEffect(() => {
+    let active = true;
+    async function check() {
+      try {
+        const res  = await fetch("/api/chat/unread");
+        const data = await res.json();
+        if (active) setUnread(data.count ?? 0);
+      } catch {}
+    }
+    check();
+    const id = setInterval(check, 10_000);
+    return () => { active = false; clearInterval(id); };
+  }, []);
+
+  // Clear badge when on chat page
+  useEffect(() => {
+    if (pathname.startsWith("/chat")) {
+      setUnread(0);
+      fetch("/api/chat/read", { method: "POST" }).catch(() => {});
+    }
+  }, [pathname]);
 
   function toggleCollapse() {
     setCollapsed(v => {
@@ -117,8 +144,10 @@ export function Sidebar() {
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const { href, icon: Icon, label } = item;
-          const badge  = "badge" in item ? (item as { badge?: string }).badge : undefined;
-          const active = pathname === href || (href !== "/dashboard" && href !== "/my-tasks" && pathname.startsWith(href));
+          const badge    = "badge" in item ? (item as { badge?: string }).badge : undefined;
+          const isChat   = "chat"  in item && (item as { chat?: boolean }).chat;
+          const active   = pathname === href || (href !== "/dashboard" && href !== "/my-tasks" && pathname.startsWith(href));
+          const chatDot  = isChat && unread > 0;
 
           return (
             <Link
@@ -131,16 +160,45 @@ export function Sidebar() {
                 background:     active ? "var(--c-accent-glow)" : "transparent",
                 color:          active ? "var(--c-accent-text)" : "var(--c-text-muted)",
                 border:         active ? "1px solid rgba(124,58,237,0.2)" : "1px solid transparent",
+                position:       "relative",
               }}
             >
-              <Icon size={16} style={{ flexShrink: 0 }} />
+              {/* Icon with notification dot for chat */}
+              <span style={{ position: "relative", flexShrink: 0 }}>
+                <Icon size={16} />
+                {chatDot && (
+                  <span
+                    style={{
+                      position:     "absolute",
+                      top:          -3,
+                      right:        -3,
+                      width:        8,
+                      height:       8,
+                      borderRadius: "50%",
+                      background:   "#ef4444",
+                      border:       "1.5px solid var(--c-bg)",
+                    }}
+                  />
+                )}
+              </span>
+
               {!collapsed && label}
+
               {!collapsed && badge && (
                 <span
                   className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full font-bold"
                   style={{ background: "var(--c-accent-glow)", color: "var(--c-accent-text)" }}
                 >
                   {badge}
+                </span>
+              )}
+
+              {!collapsed && chatDot && (
+                <span
+                  className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full font-bold text-white"
+                  style={{ background: "#ef4444" }}
+                >
+                  {unread > 9 ? "9+" : unread}
                 </span>
               )}
             </Link>

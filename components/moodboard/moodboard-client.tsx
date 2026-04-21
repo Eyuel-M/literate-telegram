@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { StickyNote, ImagePlus, X, Check, Palette, BotMessageSquare, Pipette } from "lucide-react";
+import { StickyNote, ImagePlus, X, Check, Palette, BotMessageSquare, Pipette, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { useMoodboard, isImageUrl, uploadFile, type MbItem } from "./moodboard-logic";
 import { AiChat } from "./ai-chat";
 
@@ -41,18 +41,18 @@ function rgbToCmyk(r: number, g: number, b: number) {
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 
-function canvasPos(e: React.DragEvent | React.MouseEvent, ref: React.RefObject<HTMLDivElement>) {
+function canvasPos(e: React.DragEvent | React.MouseEvent, ref: React.RefObject<HTMLDivElement>, zoom = 1) {
   const rect = ref.current!.getBoundingClientRect();
   return {
-    x: e.clientX - rect.left + ref.current!.scrollLeft,
-    y: e.clientY - rect.top  + ref.current!.scrollTop,
+    x: (e.clientX - rect.left + ref.current!.scrollLeft) / zoom,
+    y: (e.clientY - rect.top  + ref.current!.scrollTop)  / zoom,
   };
 }
 
 /* ─── Item card ────────────────────────────────────────────────── */
 
 function ItemCard({
-  item, onMove, onSavePos, onBringToFront, onDelete, onUpdate, canvasRef,
+  item, onMove, onSavePos, onBringToFront, onDelete, onUpdate, canvasRef, zoom,
 }: {
   item:           MbItem;
   onMove:         (id: string, x: number, y: number) => void;
@@ -61,6 +61,7 @@ function ItemCard({
   onDelete:       (id: string) => void;
   onUpdate:       (id: string, patch: { content?: string; label?: string | null }) => Promise<void>;
   canvasRef:      React.RefObject<HTMLDivElement>;
+  zoom:           number;
 }) {
   const [editing,      setEditing]      = useState(false);
   const [draft,        setDraft]        = useState(item.content);
@@ -87,11 +88,11 @@ function ItemCard({
     const origY   = item.y;
 
     function onMM(ev: MouseEvent) {
-      onMove(item.id, origX + ev.clientX - startMX, origY + ev.clientY - startMY);
+      onMove(item.id, origX + (ev.clientX - startMX) / zoom, origY + (ev.clientY - startMY) / zoom);
     }
     function onMU(ev: MouseEvent) {
       dragging.current = false;
-      onSavePos(item.id, origX + ev.clientX - startMX, origY + ev.clientY - startMY);
+      onSavePos(item.id, origX + (ev.clientX - startMX) / zoom, origY + (ev.clientY - startMY) / zoom);
       document.removeEventListener("mousemove", onMM);
       document.removeEventListener("mouseup",   onMU);
     }
@@ -334,6 +335,25 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
   const [showChat,      setShowChat]      = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pickerColor,   setPickerColor]   = useState("#7c3aed");
+  const [zoom,          setZoom]          = useState(1);
+  const zoomRef         = useRef(zoom);
+
+  // Keep zoom ref in sync for wheel handler
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
+  // Ctrl+wheel zoom
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    function onWheel(e: WheelEvent) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom((z) => Math.min(2, Math.max(0.25, Math.round((z + delta) * 100) / 100)));
+    }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   // Close color picker on outside click
   useEffect(() => {
@@ -353,7 +373,7 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const { x, y } = canvasPos(e, canvasRef);
+    const { x, y } = canvasPos(e, canvasRef, zoomRef.current);
 
     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
     if (files.length) {
@@ -502,9 +522,47 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
           <ImagePlus size={12} className="inline mr-1.5 mb-0.5" />
           Drop images here · Paste a URL or screenshot · Drag from Pinterest
         </span>
+        {/* Zoom controls */}
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={() => setZoom((z) => Math.max(0.25, Math.round((z - 0.1) * 100) / 100))}
+            title="Zoom out"
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all"
+            style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}
+          >
+            <ZoomOut size={12} />
+          </button>
+          <button
+            onClick={() => setZoom(1)}
+            title="Reset zoom"
+            className="px-2 h-7 flex items-center justify-center rounded-lg text-[11px] font-mono font-semibold transition-all"
+            style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text)", minWidth: 48 }}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            onClick={() => setZoom((z) => Math.min(2, Math.round((z + 0.1) * 100) / 100))}
+            title="Zoom in"
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all"
+            style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}
+          >
+            <ZoomIn size={12} />
+          </button>
+          <button
+            onClick={() => setZoom(0.5)}
+            title="Fit board"
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all ml-0.5"
+            style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}
+          >
+            <Maximize2 size={12} />
+          </button>
+        </div>
+
+        <span style={{ color: "var(--c-border)", marginLeft: 4, marginRight: 4 }}>|</span>
+
         <button
           onClick={() => setShowChat(v => !v)}
-          className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all"
           style={{
             background:  showChat ? "var(--c-accent)" : "var(--c-elevated)",
             color:       showChat ? "#fff" : "var(--c-text)",
@@ -546,7 +604,8 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
         )}
 
         {/* inner canvas */}
-        <div style={{ width: 4000, height: 3000, position: "relative" }}>
+        <div style={{ width: 4000 * zoom, height: 3000 * zoom, position: "relative" }}>
+          <div style={{ width: 4000, height: 3000, position: "absolute", top: 0, left: 0, transformOrigin: "0 0", transform: `scale(${zoom})` }}>
           {items.map(item => (
             <ItemCard
               key={item.id}
@@ -554,10 +613,10 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
               onMove={moveItem}
               onSavePos={savePosition}
               onBringToFront={bringToFront}
-
               onDelete={deleteItem}
               onUpdate={updateItem}
               canvasRef={canvasRef}
+              zoom={zoom}
             />
           ))}
 
@@ -570,6 +629,7 @@ export function MoodboardClient({ clientId, initialItems }: { clientId: string; 
               <p className="text-sm opacity-40">Drop images · Paste URLs · Add notes</p>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

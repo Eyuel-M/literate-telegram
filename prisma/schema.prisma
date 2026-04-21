@@ -225,13 +225,32 @@ model MoodboardItem {
   id          String   @id @default(cuid())
   moodboardId String
   moodboard   Moodboard @relation(fields: [moodboardId], references: [id], onDelete: Cascade)
-  type        String   // IMAGE | NOTE
-  content     String   // image URL or note text
-  label       String?  // caption for images, unused for notes
+  type        String   // IMAGE | NOTE | COLOR
+  content     String
+  label       String?
   x           Float    @default(80)
   y           Float    @default(80)
   width       Float    @default(300)
   zIndex      Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ChatMessage {
+  id          String        @id @default(cuid())
+  content     String
+  authorId    String
+  authorName  String
+  authorColor String        @default("#7c3aed")
+  createdAt   DateTime      @default(now())
+  mentions    ChatMention[]
+}
+
+model ChatMention {
+  id        String      @id @default(cuid())
+  messageId String
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  read      Boolean     @default(false)
+  createdAt DateTime    @default(now())
 }
