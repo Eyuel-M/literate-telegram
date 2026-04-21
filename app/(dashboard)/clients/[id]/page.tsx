@@ -9,9 +9,9 @@ import { NewProjectButton } from "@/components/projects/new-project-button";
 import { QuickStatus } from "@/components/ui/quick-status";
 import { CircularProgress } from "@/components/dashboard/circular-progress";
 
-async function getClient(id: string, userId: string) {
+async function getClient(id: string, workspaceId: string) {
   return prisma.client.findFirst({
-    where: { id, userId },
+    where: { id, workspaceId },
     include: {
       projects: {
         include: {
@@ -27,8 +27,8 @@ async function getClient(id: string, userId: string) {
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  const userId  = (session!.user as { id: string }).id;
-  const client  = await getClient(params.id, userId);
+  const { workspaceId } = session!.user as { id: string; workspaceId: string };
+  const client  = await getClient(params.id, workspaceId);
   if (!client) notFound();
 
   const totalMinutes = client.projects.reduce(

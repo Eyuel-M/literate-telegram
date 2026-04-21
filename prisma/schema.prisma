@@ -7,21 +7,38 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Workspace {
+  id                    String    @id @default(cuid())
+  name                  String
+  slug                  String    @unique
+  plan                  String    @default("TRIAL")   // TRIAL | FREE | PRO | AGENCY
+  subscriptionStatus    String    @default("ACTIVE")  // ACTIVE | EXPIRED | CANCELLED | PAST_DUE
+  subscriptionExpiresAt DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  users        User[]
+  clients      Client[]
+  teamMembers  TeamMember[]
+  templates    Template[]
+  chatMessages ChatMessage[]
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String
   password  String
   avatar    String?
-  role      String   @default("MEMBER")
+  role      String   @default("MEMBER") // ADMIN | MEMBER | SUPER_ADMIN
   createdAt DateTime @default(now())
 
-  clients           Client[]
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   timeEntries       TimeEntry[]
-  teamMembers       TeamMember[]
   delegationsGiven  Delegation[]  @relation("DelegationsGiven")
   teamMemberProfile TeamMember?   @relation("LinkedUser")
-  templates         Template[]
 }
 
 model TeamMember {
@@ -33,13 +50,12 @@ model TeamMember {
   color     String   @default("#7c3aed")
   createdAt DateTime @default(now())
 
-  userId       String
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId  String
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   delegations  Delegation[]
 
-  // Optional link to a User login account for this team member
-  linkedUserId String?      @unique
-  linkedUser   User?        @relation("LinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  linkedUserId String? @unique
+  linkedUser   User?   @relation("LinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
 }
 
 model Delegation {
@@ -74,10 +90,10 @@ model Client {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projects  Project[]
-  moodboard Moodboard?
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projects    Project[]
+  moodboard   Moodboard?
 }
 
 model Project {
@@ -196,9 +212,9 @@ model Template {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
-  userId String
-  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items  TemplateItem[]
+  workspaceId String?
+  workspace   Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  items       TemplateItem[]
 }
 
 model TemplateItem {
@@ -222,18 +238,18 @@ model Moodboard {
 }
 
 model MoodboardItem {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   moodboardId String
   moodboard   Moodboard @relation(fields: [moodboardId], references: [id], onDelete: Cascade)
-  type        String   // IMAGE | NOTE | COLOR
+  type        String
   content     String
   label       String?
-  x           Float    @default(80)
-  y           Float    @default(80)
-  width       Float    @default(300)
-  zIndex      Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  x           Float     @default(80)
+  y           Float     @default(80)
+  width       Float     @default(300)
+  zIndex      Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model ChatMessage {
@@ -243,6 +259,9 @@ model ChatMessage {
   authorName  String
   authorColor String        @default("#7c3aed")
   createdAt   DateTime      @default(now())
+
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   mentions    ChatMention[]
 }
 

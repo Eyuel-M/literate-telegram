@@ -3,20 +3,21 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-async function getProject(id: string, userId: string) {
+type SessionUser = { id: string; workspaceId: string };
+
+async function getProject(id: string, workspaceId: string) {
   return prisma.project.findFirst({
-    where: { id, deletedAt: null, client: { userId, deletedAt: null } },
+    where: { id, deletedAt: null, client: { workspaceId, deletedAt: null } },
   });
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as { id: string }).id;
+  const { workspaceId } = session.user as SessionUser;
 
   const project = await prisma.project.findFirst({
-    where: { id: params.id, deletedAt: null, client: { userId, deletedAt: null } },
+    where: { id: params.id, deletedAt: null, client: { workspaceId, deletedAt: null } },
     include: {
       client: { select: { id: true, name: true, color: true, email: true } },
       deliverables: {
@@ -25,17 +26,17 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
           versions: {
             orderBy: { number: "desc" },
             include: {
-              assets: { take: 1 },
-              _count: { select: { feedback: true, assets: true } },
+              assets:  { take: 1 },
+              _count:  { select: { feedback: true, assets: true } },
             },
           },
-          _count: { select: { versions: true, timeEntries: true } },
+          _count:      { select: { versions: true, timeEntries: true } },
           timeEntries: { select: { duration: true } },
         },
         orderBy: { sortOrder: "asc" },
       },
       timeEntries: {
-        select: { duration: true, date: true, description: true },
+        select:  { duration: true, date: true, description: true },
         orderBy: { date: "desc" },
       },
     },
@@ -48,21 +49,21 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { workspaceId } = session.user as SessionUser;
 
-  const userId = (session.user as { id: string }).id;
-  const existing = await getProject(params.id, userId);
+  const existing = await getProject(params.id, workspaceId);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
   const project = await prisma.project.update({
     where: { id: params.id },
     data: {
-      name: body.name,
+      name:        body.name,
       description: body.description,
-      status: body.status,
-      color: body.color,
-      dueDate: body.dueDate ? new Date(body.dueDate) : null,
-      budget: body.budget ? parseFloat(body.budget) : null,
+      status:      body.status,
+      color:       body.color,
+      dueDate:     body.dueDate ? new Date(body.dueDate) : null,
+      budget:      body.budget  ? parseFloat(body.budget)  : null,
     },
   });
 
@@ -72,9 +73,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { workspaceId } = session.user as SessionUser;
 
-  const userId = (session.user as { id: string }).id;
-  const existing = await getProject(params.id, userId);
+  const existing = await getProject(params.id, workspaceId);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await prisma.project.update({ where: { id: params.id }, data: { deletedAt: new Date() } });

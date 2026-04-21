@@ -10,9 +10,9 @@ import { NewDeliverableButton } from "@/components/deliverables/new-deliverable-
 import { QuickStatus } from "@/components/ui/quick-status";
 import { CircularProgress } from "@/components/dashboard/circular-progress";
 
-async function getProject(id: string, userId: string) {
+async function getProject(id: string, workspaceId: string) {
   return prisma.project.findFirst({
-    where: { id, client: { userId } },
+    where: { id, client: { workspaceId } },
     include: {
       client: { select: { id: true, name: true, color: true } },
       deliverables: {
@@ -51,8 +51,8 @@ const COL_COLORS: Record<string, string> = {
 
 export default async function ProjectPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  const userId = (session!.user as { id: string }).id;
-  const project = await getProject(params.id, userId);
+  const { workspaceId } = session!.user as { id: string; workspaceId: string };
+  const project = await getProject(params.id, workspaceId);
   if (!project) notFound();
 
   const totalMinutes = project.timeEntries.reduce((s, e) => s + e.duration, 0);

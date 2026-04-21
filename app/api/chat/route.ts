@@ -3,15 +3,19 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+type SessionUser = { id: string; name: string; workspaceId: string };
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { workspaceId } = session.user as SessionUser;
 
     const { searchParams } = new URL(req.url);
     const cursor = searchParams.get("cursor");
 
     const messages = await prisma.chatMessage.findMany({
+      where: { workspaceId },
       take: 50,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       orderBy: { createdAt: "desc" },
@@ -29,10 +33,9 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { id: userId, name, workspaceId } = session.user as SessionUser;
 
-    const user = session.user as { id: string; name: string };
     const { content, color } = await req.json();
-
     if (!content?.trim()) return NextResponse.json({ error: "Empty message" }, { status: 400 });
 
     const mentionPattern = /@\[([^\]]+)\]\(([^)]+)\)/g;
@@ -45,14 +48,17 @@ export async function POST(req: NextRequest) {
     const message = await prisma.chatMessage.create({
       data: {
         content,
-        authorId:    user.id,
-        authorName:  user.name ?? "Unknown",
+        authorId:    userId,
+        authorName:  name ?? "Unknown",
         authorColor: color ?? "#7c3aed",
-        mentions: mentionedUserIds.length > 0 ? {
-          create: mentionedUserIds
-            .filter((uid) => uid !== user.id)
-            .map((uid) => ({ userId: uid })),
-        } : undefined,
+        workspaceId,
+        mentions: mentionedUserIds.length > 0
+          ? {
+              create: mentionedUserIds
+                .filter((uid) => uid !== userId)
+                .map((uid) => ({ userId: uid })),
+            }
+          : undefined,
       },
       include: { mentions: { select: { userId: true, read: true } } },
     });

@@ -34,12 +34,12 @@ function buildWeekly(entries: { duration: number; date: Date }[]) {
 
 /* ─── admin data ──────────────────────────────────────────── */
 
-async function getAdminData(userId: string) {
+async function getAdminData(userId: string, workspaceId: string) {
   const weekAgo = new Date(Date.now() - 7 * 86400_000);
   const [clients, projects, pendingReviews, timeEntries, delegations] = await Promise.all([
-    prisma.client.count({ where: { userId, status: "ACTIVE", deletedAt: null } }),
+    prisma.client.count({ where: { workspaceId, status: "ACTIVE", deletedAt: null } }),
     prisma.project.findMany({
-      where: { deletedAt: null, client: { userId, deletedAt: null } },
+      where: { deletedAt: null, client: { workspaceId, deletedAt: null } },
       include: {
         client: { select: { name: true, color: true } },
         deliverables: { select: { status: true } },
@@ -48,9 +48,9 @@ async function getAdminData(userId: string) {
       },
       orderBy: { updatedAt: "desc" },
     }),
-    prisma.deliverable.count({ where: { deletedAt: null, project: { deletedAt: null, client: { userId, deletedAt: null } }, status: "IN_REVIEW" } }),
+    prisma.deliverable.count({ where: { deletedAt: null, project: { deletedAt: null, client: { workspaceId, deletedAt: null } }, status: "IN_REVIEW" } }),
     prisma.timeEntry.findMany({ where: { userId, date: { gte: weekAgo } }, select: { duration: true, date: true } }),
-    prisma.delegation.count({ where: { assignedBy: { id: userId }, status: { not: "DONE" }, deletedAt: null } }),
+    prisma.delegation.count({ where: { teamMember: { workspaceId }, status: { not: "DONE" }, deletedAt: null } }),
   ]);
 
   const totalWeekMinutes = timeEntries.reduce((s, e) => s + e.duration, 0);
@@ -113,7 +113,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 
 export default async function DashboardPage() {
   const session  = await getServerSession(authOptions);
-  const user     = session!.user as { id: string; name: string; role: string };
+  const user = session!.user as { id: string; name: string; role: string; workspaceId: string };
   const isMember = user.role !== "ADMIN";
 
   /* ── MEMBER DASHBOARD ── */
@@ -240,7 +240,7 @@ export default async function DashboardPage() {
   }
 
   /* ── ADMIN DASHBOARD ── */
-  const d = await getAdminData(user.id);
+  const d = await getAdminData(user.id, user.workspaceId);
 
   const stats = [
     { label: "Active Clients",   value: d.clients,                          icon: Users,         color: "#3b82f6",  bg: "rgba(59,130,246,0.08)",  border: "rgba(59,130,246,0.2)"  },

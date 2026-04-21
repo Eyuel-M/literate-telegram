@@ -9,10 +9,10 @@ import { ArrowLeft, Palette } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { MoodboardClient } from "@/components/moodboard/moodboard-client";
 
-async function getData(clientId: string, userId: string, isAdmin: boolean) {
+async function getData(clientId: string, userId: string, workspaceId: string, isAdmin: boolean) {
   const client = await prisma.client.findFirst({
     where: isAdmin
-      ? { id: clientId, userId, deletedAt: null }
+      ? { id: clientId, workspaceId, deletedAt: null }
       : { id: clientId, deletedAt: null },
   });
   if (!client) return null;
@@ -47,10 +47,10 @@ async function getData(clientId: string, userId: string, isAdmin: boolean) {
 
 export default async function MoodboardPage({ params }: { params: { id: string } }) {
   const session  = await getServerSession(authOptions);
-  const user     = session!.user as { id: string; role: string; name: string };
+  const user     = session!.user as { id: string; role: string; name: string; workspaceId: string };
   const isAdmin  = user.role === "ADMIN";
 
-  const data = await getData(params.id, user.id, isAdmin);
+  const data = await getData(params.id, user.id, user.workspaceId, isAdmin);
   if (!data) notFound();
 
   const { client, moodboard, collaborators } = data;

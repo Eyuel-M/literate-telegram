@@ -11,9 +11,9 @@ import { FeedbackThread } from "@/components/deliverables/feedback-thread";
 import { NewVersionButton } from "@/components/deliverables/new-version-button";
 import { TimeLogButton } from "@/components/time/time-log-button";
 
-async function getDeliverable(id: string, userId: string) {
+async function getDeliverable(id: string, workspaceId: string) {
   return prisma.deliverable.findFirst({
-    where: { id, project: { client: { userId } } },
+    where: { id, project: { client: { workspaceId } } },
     include: {
       project: {
         include: {
@@ -40,8 +40,8 @@ async function getDeliverable(id: string, userId: string) {
 
 export default async function DeliverablePage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
-  const userId = (session!.user as { id: string }).id;
-  const d = await getDeliverable(params.id, userId);
+  const { workspaceId } = session!.user as { id: string; workspaceId: string };
+  const d = await getDeliverable(params.id, workspaceId);
   if (!d) notFound();
 
   const latestVersion = d.versions[d.versions.length - 1];

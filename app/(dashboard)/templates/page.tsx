@@ -5,15 +5,15 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TemplatesClient } from "@/components/templates/templates-client";
 
-async function getData(userId: string) {
+async function getData(workspaceId: string) {
   const [templates, projects] = await Promise.all([
     prisma.template.findMany({
-      where: { userId },
+      where: { OR: [{ workspaceId }, { isPreset: true, workspaceId: null }], deletedAt: null },
       include: { items: { orderBy: { sortOrder: "asc" } } },
       orderBy: [{ isPreset: "desc" }, { createdAt: "asc" }],
     }),
     prisma.project.findMany({
-      where: { client: { userId } },
+      where: { deletedAt: null, client: { workspaceId, deletedAt: null } },
       select: { id: true, name: true, client: { select: { name: true, color: true } } },
       orderBy: { updatedAt: "desc" },
     }),
@@ -23,8 +23,8 @@ async function getData(userId: string) {
 
 export default async function TemplatesPage() {
   const session = await getServerSession(authOptions);
-  const userId  = (session!.user as { id: string }).id;
-  const { templates, projects } = await getData(userId);
+  const { workspaceId } = session!.user as { id: string; workspaceId: string };
+  const { templates, projects } = await getData(workspaceId);
 
   return (
     <div className="animate-fade-in">

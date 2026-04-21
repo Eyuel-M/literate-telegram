@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Layers, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
@@ -98,8 +99,14 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs mt-6" style={{ color: "var(--c-text-faint)" }}>
-          Forma — Creative Workflow OS v0.2
+        <p className="text-center text-xs mt-4" style={{ color: "var(--c-text-faint)" }}>
+          New studio?{" "}
+          <Link href="/signup" className="font-medium" style={{ color: "var(--c-accent-text)" }}>
+            Create a free workspace
+          </Link>
+        </p>
+        <p className="text-center text-xs mt-3" style={{ color: "var(--c-text-faint)" }}>
+          Forma — Creative Workflow OS v1.0
         </p>
       </div>
     </div>

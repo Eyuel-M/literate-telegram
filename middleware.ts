@@ -1,16 +1,22 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
-const ADMIN_PATHS = ["/clients", "/projects", "/delegations", "/templates", "/time", "/settings", "/archive"];
+const ADMIN_PATHS = ["/clients", "/projects", "/delegations", "/templates", "/time", "/settings", "/archive", "/billing"];
 
 export default withAuth(
   function middleware(req) {
-    const role     = (req.nextauth.token as { role?: string })?.role;
+    const token    = req.nextauth.token as { role?: string; workspaceId?: string } | null;
+    const role     = token?.role;
     const pathname = req.nextUrl.pathname;
 
-    // Non-admins blocked from admin-only pages (moodboard is exempt — access checked in the page)
+    // Super-admin panel protection
+    if (pathname.startsWith("/admin") && role !== "SUPER_ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
+    // Non-admins blocked from admin-only pages (moodboard is exempt)
     const isMoodboard = /^\/clients\/[^/]+\/moodboard/.test(pathname);
-    if (role !== "ADMIN" && !isMoodboard && ADMIN_PATHS.some((p) => pathname.startsWith(p))) {
+    if (role !== "ADMIN" && role !== "SUPER_ADMIN" && !isMoodboard && ADMIN_PATHS.some((p) => pathname.startsWith(p))) {
       return NextResponse.redirect(new URL("/my-tasks", req.url));
     }
 
@@ -40,5 +46,7 @@ export const config = {
     "/archive/:path*",
     "/my-tasks/:path*",
     "/chat/:path*",
+    "/billing/:path*",
+    "/admin/:path*",
   ],
 };

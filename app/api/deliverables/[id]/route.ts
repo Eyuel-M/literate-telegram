@@ -3,30 +3,27 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-async function getDeliverable(id: string, userId: string) {
+type SessionUser = { id: string; workspaceId: string };
+
+async function getDeliverable(id: string, workspaceId: string) {
   return prisma.deliverable.findFirst({
-    where: { id, deletedAt: null, project: { deletedAt: null, client: { userId, deletedAt: null } } },
+    where: { id, deletedAt: null, project: { deletedAt: null, client: { workspaceId, deletedAt: null } } },
   });
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as { id: string }).id;
+  const { workspaceId } = session.user as SessionUser;
 
   const deliverable = await prisma.deliverable.findFirst({
-    where: { id: params.id, deletedAt: null, project: { deletedAt: null, client: { userId, deletedAt: null } } },
+    where: { id: params.id, deletedAt: null, project: { deletedAt: null, client: { workspaceId, deletedAt: null } } },
     include: {
-      project: {
-        include: {
-          client: { select: { id: true, name: true, color: true } },
-        },
-      },
+      project: { include: { client: { select: { id: true, name: true, color: true } } } },
       versions: {
         orderBy: { number: "asc" },
         include: {
-          assets: { orderBy: { createdAt: "asc" } },
+          assets:   { orderBy: { createdAt: "asc" } },
           feedback: {
             orderBy: { createdAt: "asc" },
             include: { replies: { orderBy: { createdAt: "asc" } } },
@@ -34,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         },
       },
       timeEntries: {
-        select: { duration: true, date: true, description: true },
+        select:  { duration: true, date: true, description: true },
         orderBy: { date: "desc" },
       },
     },
@@ -47,20 +44,20 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { workspaceId } = session.user as SessionUser;
 
-  const userId = (session.user as { id: string }).id;
-  const existing = await getDeliverable(params.id, userId);
+  const existing = await getDeliverable(params.id, workspaceId);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
   const deliverable = await prisma.deliverable.update({
     where: { id: params.id },
     data: {
-      name: body.name,
+      name:        body.name,
       description: body.description,
-      type: body.type,
-      status: body.status,
-      dueDate: body.dueDate ? new Date(body.dueDate) : null,
+      type:        body.type,
+      status:      body.status,
+      dueDate:     body.dueDate ? new Date(body.dueDate) : null,
     },
   });
 
@@ -70,9 +67,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { workspaceId } = session.user as SessionUser;
 
-  const userId = (session.user as { id: string }).id;
-  const existing = await getDeliverable(params.id, userId);
+  const existing = await getDeliverable(params.id, workspaceId);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await prisma.deliverable.update({ where: { id: params.id }, data: { deletedAt: new Date() } });

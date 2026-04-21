@@ -3,13 +3,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+type SessionUser = { id: string; workspaceId: string };
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const userId = (session.user as { id: string }).id;
+  const { workspaceId } = session.user as SessionUser;
 
   const templates = await prisma.template.findMany({
-    where: { userId, deletedAt: null },
+    where: {
+      deletedAt: null,
+      OR: [{ workspaceId }, { isPreset: true, workspaceId: null }],
+    },
     include: { items: { orderBy: { sortOrder: "asc" } } },
     orderBy: [{ isPreset: "desc" }, { createdAt: "asc" }],
   });
@@ -21,7 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userId = (session.user as { id: string }).id;
+    const { workspaceId } = session.user as SessionUser;
 
     const body = await req.json();
     if (!body.name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -33,14 +38,18 @@ export async function POST(req: NextRequest) {
         color:       body.color   ?? "#7c3aed",
         icon:        body.icon    ?? "Layers",
         isPreset:    false,
-        userId,
+        workspaceId,
         items: body.items?.length
-          ? { create: body.items.map((item: { name: string; type?: string; description?: string }, i: number) => ({
-              name:      item.name.trim(),
-              type:      item.type ?? "OTHER",
-              description: item.description?.trim() || null,
-              sortOrder: i,
-            })) }
+          ? {
+              create: body.items.map(
+                (item: { name: string; type?: string; description?: string }, i: number) => ({
+                  name:        item.name.trim(),
+                  type:        item.type ?? "OTHER",
+                  description: item.description?.trim() || null,
+                  sortOrder:   i,
+                })
+              ),
+            }
           : undefined,
       },
       include: { items: { orderBy: { sortOrder: "asc" } } },

@@ -5,10 +5,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DelegationsClient } from "@/components/delegations/delegations-client";
 
-async function getData(userId: string) {
+async function getData(userId: string, workspaceId: string) {
   const [delegations, teamMembers, projects] = await Promise.all([
     prisma.delegation.findMany({
-      where: { assignedById: userId, deletedAt: null },
+      where: { teamMember: { workspaceId }, deletedAt: null },
       include: {
         teamMember: { select: { id: true, name: true, color: true, role: true } },
         project: { select: { id: true, name: true, client: { select: { name: true, color: true } } } },
@@ -16,12 +16,12 @@ async function getData(userId: string) {
       orderBy: [{ status: "asc" }, { priority: "asc" }, { dueDate: "asc" }],
     }),
     prisma.teamMember.findMany({
-      where: { userId },
+      where: { workspaceId },
       include: { delegations: { select: { status: true } } },
       orderBy: { name: "asc" },
     }),
     prisma.project.findMany({
-      where: { deletedAt: null, client: { userId, deletedAt: null } },
+      where: { deletedAt: null, client: { workspaceId, deletedAt: null } },
       select: { id: true, name: true, client: { select: { name: true, color: true } } },
       orderBy: { updatedAt: "desc" },
     }),
@@ -32,8 +32,8 @@ async function getData(userId: string) {
 
 export default async function DelegationsPage() {
   const session = await getServerSession(authOptions);
-  const userId  = (session!.user as { id: string }).id;
-  const { delegations, teamMembers, projects } = await getData(userId);
+  const { id: userId, workspaceId } = session!.user as { id: string; workspaceId: string };
+  const { delegations, teamMembers, projects } = await getData(userId, workspaceId);
 
   return (
     <div className="animate-fade-in">

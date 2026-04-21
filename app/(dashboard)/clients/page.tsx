@@ -6,9 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { NewClientButton } from "@/components/clients/new-client-button";
 import { ClientsGrid } from "@/components/clients/clients-grid";
 
-async function getClients(userId: string) {
+async function getClients(workspaceId: string) {
   return prisma.client.findMany({
-    where: { userId, deletedAt: null },
+    where: { workspaceId, deletedAt: null },
     include: {
       projects: {
         include: {
@@ -22,8 +22,8 @@ async function getClients(userId: string) {
 
 export default async function ClientsPage() {
   const session = await getServerSession(authOptions);
-  const userId  = (session!.user as { id: string }).id;
-  const clients = await getClients(userId);
+  const { workspaceId } = session!.user as { id: string; workspaceId: string };
+  const clients = await getClients(workspaceId);
 
   return (
     <div className="animate-fade-in" style={{ color: "var(--c-text)" }}>

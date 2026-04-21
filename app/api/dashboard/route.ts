@@ -3,11 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+type SessionUser = { id: string; workspaceId: string };
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as { id: string }).id;
+  const { id: userId, workspaceId } = session.user as SessionUser;
 
   const [
     totalClients,
@@ -16,20 +17,18 @@ export async function GET() {
     recentProjects,
     weekTimeEntries,
   ] = await Promise.all([
-    prisma.client.count({ where: { userId, status: "ACTIVE" } }),
-    prisma.project.count({ where: { client: { userId }, status: { in: ["IN_PROGRESS", "REVIEW"] } } }),
-    prisma.deliverable.count({ where: { project: { client: { userId } }, status: "IN_REVIEW" } }),
+    prisma.client.count({ where: { workspaceId, status: "ACTIVE", deletedAt: null } }),
+    prisma.project.count({ where: { client: { workspaceId }, status: { in: ["IN_PROGRESS", "REVIEW"] }, deletedAt: null } }),
+    prisma.deliverable.count({ where: { project: { client: { workspaceId } }, status: "IN_REVIEW", deletedAt: null } }),
     prisma.project.findMany({
-      where: { client: { userId } },
+      where: { client: { workspaceId }, deletedAt: null },
       include: {
-        client: { select: { name: true, color: true } },
-        _count: { select: { deliverables: true } },
-        deliverables: {
-          select: { status: true },
-        },
+        client:      { select: { name: true, color: true } },
+        _count:      { select: { deliverables: true } },
+        deliverables: { select: { status: true } },
       },
       orderBy: { updatedAt: "desc" },
-      take: 6,
+      take:    6,
     }),
     prisma.timeEntry.findMany({
       where: {

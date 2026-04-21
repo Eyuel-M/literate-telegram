@@ -3,13 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+type SessionUser = { id: string; workspaceId: string };
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const userId = (session.user as { id: string }).id;
+  const { workspaceId } = session.user as SessionUser;
 
   const template = await prisma.template.findFirst({
-    where: { id: params.id, userId },
+    where: { id: params.id, OR: [{ workspaceId }, { isPreset: true, workspaceId: null }] },
     include: { items: { orderBy: { sortOrder: "asc" } } },
   });
   if (!template) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -18,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!projectId) return NextResponse.json({ error: "projectId required" }, { status: 400 });
 
   const project = await prisma.project.findFirst({
-    where: { id: projectId, client: { userId } },
+    where: { id: projectId, client: { workspaceId } },
   });
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 

@@ -6,10 +6,11 @@ import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { getInitials } from "@/lib/utils";
 import { useTheme } from "@/components/providers/theme-provider";
+import { getPlan, trialDaysLeft, type PlanKey } from "@/lib/plans";
 import {
   LayoutDashboard, Users, FolderOpen, Clock, Settings,
   LogOut, Layers, GitBranch, Sun, Moon, ShieldCheck, ListTodo, Archive,
-  ChevronLeft, ChevronRight, MessageCircle,
+  ChevronLeft, ChevronRight, MessageCircle, CreditCard, Sparkles,
 } from "lucide-react";
 
 const adminNavItems = [
@@ -36,7 +37,15 @@ const ROLE_LABELS: Record<string, string> = {
   DESIGNER:        "Designer",
   ADMIN:           "Admin",
   MEMBER:          "Member",
+  SUPER_ADMIN:     "Super Admin",
 };
+
+interface WorkspaceInfo {
+  plan:                  string;
+  subscriptionStatus:    string;
+  subscriptionExpiresAt: string | null;
+  name:                  string;
+}
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -47,7 +56,8 @@ export function Sidebar() {
     try { return localStorage.getItem("sidebar-collapsed") === "true"; } catch { return false; }
   });
 
-  const [unread, setUnread] = useState(0);
+  const [unread,    setUnread]    = useState(0);
+  const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
 
   // Poll unread mention count every 10 s
   useEffect(() => {
@@ -72,6 +82,16 @@ export function Sidebar() {
     }
   }, [pathname]);
 
+  // Fetch workspace info for plan badge
+  useEffect(() => {
+    fetch("/api/workspace")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.name) setWorkspace(d);
+      })
+      .catch(() => {});
+  }, []);
+
   function toggleCollapse() {
     setCollapsed(v => {
       const next = !v;
@@ -82,6 +102,11 @@ export function Sidebar() {
 
   const isAdmin  = (session?.user as { role?: string })?.role === "ADMIN";
   const navItems = isAdmin ? adminNavItems : memberNavItems;
+
+  const plan      = workspace ? getPlan(workspace.plan as PlanKey) : null;
+  const daysLeft  = workspace?.plan === "TRIAL" ? trialDaysLeft(workspace.subscriptionExpiresAt) : null;
+  const isTrial   = workspace?.plan === "TRIAL";
+  const isExpiring = daysLeft !== null && daysLeft <= 3;
 
   return (
     <aside
@@ -126,8 +151,22 @@ export function Sidebar() {
             <Layers size={14} className="text-white" />
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
-            <p className="text-xs font-bold tracking-tight truncate" style={{ color: "var(--c-text)" }}>Forma</p>
-            <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>Creative Workflow OS</p>
+            <p className="text-xs font-bold tracking-tight truncate" style={{ color: "var(--c-text)" }}>
+              {workspace?.name ?? "Forma"}
+            </p>
+            {plan && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <span
+                  className="text-[9px] font-bold px-1.5 py-0 rounded-full"
+                  style={{
+                    background: isExpiring ? "#fef2f2" : "var(--c-accent-glow)",
+                    color:      isExpiring ? "#ef4444" : "var(--c-accent-text)",
+                  }}
+                >
+                  {isTrial ? `Trial · ${daysLeft}d` : plan.label}
+                </span>
+              </div>
+            )}
           </div>
           <button
             onClick={toggleCollapse}
@@ -163,7 +202,6 @@ export function Sidebar() {
                 position:       "relative",
               }}
             >
-              {/* Icon with notification dot for chat */}
               <span style={{ position: "relative", flexShrink: 0 }}>
                 <Icon size={16} />
                 {chatDot && (
@@ -206,6 +244,21 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Trial expiry nudge */}
+      {!collapsed && isTrial && isExpiring && (
+        <div
+          className="mx-2 mb-2 rounded-xl px-3 py-2.5"
+          style={{ background: "#fef2f2", border: "1px solid #fecaca" }}
+        >
+          <p className="text-[10px] font-semibold" style={{ color: "#dc2626" }}>
+            Trial expires in {daysLeft} day{daysLeft !== 1 ? "s" : ""}
+          </p>
+          <Link href="/billing" className="text-[10px] underline" style={{ color: "#dc2626" }}>
+            Upgrade now →
+          </Link>
+        </div>
+      )}
+
       {/* Bottom controls */}
       <div className="px-2 pb-4 pt-3 space-y-0.5" style={{ borderTop: "1px solid var(--c-border)" }}>
         <button
@@ -220,11 +273,31 @@ export function Sidebar() {
           {!collapsed && (theme === "dark" ? "Light mode" : "Dark mode")}
         </button>
 
+        {isAdmin && (
+          <Link
+            href="/billing"
+            title="Billing"
+            className="flex items-center gap-3 px-2 py-2.5 rounded-xl text-sm font-medium transition-all"
+            style={{
+              justifyContent: collapsed ? "center" : "flex-start",
+              color:          pathname.startsWith("/billing") ? "var(--c-accent-text)" : "var(--c-text-muted)",
+              background:     pathname.startsWith("/billing") ? "var(--c-accent-glow)" : "transparent",
+            }}
+          >
+            {isTrial ? <Sparkles size={16} /> : <CreditCard size={16} />}
+            {!collapsed && "Billing & Plan"}
+          </Link>
+        )}
+
         <Link
           href="/settings"
           title="Settings"
           className="flex items-center gap-3 px-2 py-2.5 rounded-xl text-sm font-medium transition-all"
-          style={{ color: "var(--c-text-muted)", justifyContent: collapsed ? "center" : "flex-start" }}
+          style={{
+            justifyContent: collapsed ? "center" : "flex-start",
+            color:          pathname.startsWith("/settings") ? "var(--c-accent-text)" : "var(--c-text-muted)",
+            background:     pathname.startsWith("/settings") ? "var(--c-accent-glow)" : "transparent",
+          }}
         >
           <Settings size={16} />
           {!collapsed && "Settings"}

@@ -7,9 +7,9 @@ import Link from "next/link";
 import { formatDuration, formatDate, STATUS_LABELS, STATUS_COLORS } from "@/lib/utils";
 import { FolderOpen, Calendar, Clock } from "lucide-react";
 
-async function getAllProjects(userId: string) {
+async function getAllProjects(workspaceId: string) {
   return prisma.project.findMany({
-    where: { deletedAt: null, client: { userId, deletedAt: null } },
+    where: { deletedAt: null, client: { workspaceId, deletedAt: null } },
     include: {
       client: { select: { id: true, name: true, color: true } },
       deliverables: { select: { status: true } },
@@ -22,8 +22,8 @@ async function getAllProjects(userId: string) {
 
 export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);
-  const userId = (session!.user as { id: string }).id;
-  const projects = await getAllProjects(userId);
+  const { workspaceId } = session!.user as { id: string; workspaceId: string };
+  const projects = await getAllProjects(workspaceId);
 
   return (
     <div className="animate-fade-in">

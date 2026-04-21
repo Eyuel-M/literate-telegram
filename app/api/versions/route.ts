@@ -3,15 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+type SessionUser = { id: string; workspaceId: string };
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { workspaceId } = session.user as SessionUser;
 
-  const userId = (session.user as { id: string }).id;
   const body = await req.json();
 
   const deliverable = await prisma.deliverable.findFirst({
-    where: { id: body.deliverableId, project: { client: { userId } } },
+    where:   { id: body.deliverableId, project: { client: { workspaceId } } },
     include: { versions: { orderBy: { number: "desc" }, take: 1 } },
   });
   if (!deliverable) return NextResponse.json({ error: "Deliverable not found" }, { status: 404 });
@@ -20,13 +22,13 @@ export async function POST(req: NextRequest) {
 
   const version = await prisma.version.create({
     data: {
-      number: nextNumber,
-      notes: body.notes,
-      status: body.status ?? "DRAFT",
+      number:        nextNumber,
+      notes:         body.notes,
+      status:        body.status ?? "DRAFT",
       deliverableId: body.deliverableId,
     },
     include: {
-      assets: true,
+      assets:   true,
       feedback: { include: { replies: true } },
     },
   });
