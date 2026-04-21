@@ -1,11 +1,7 @@
-export const dynamic = "force-dynamic";
+import { redirect } from "next/navigation";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { SettingsClient } from "@/components/settings/settings-client";
-
-export default async function SettingsPage() {
-  const session = await getServerSession(authOptions);
-  const user    = session!.user as { id: string; name: string; email: string; role: string };
-  return <SettingsClient user={user} />;
+// Settings is now a slide-in drawer accessed from the sidebar.
+// Direct URL visits are redirected to the dashboard.
+export default function SettingsPage() {
+  redirect("/dashboard");
 }
