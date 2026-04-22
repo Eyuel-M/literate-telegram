@@ -45,8 +45,7 @@ export function PriorityMatrix({ projects }: Props) {
 
   const needsAttention = projects
     .filter((x) => x.dueDate && new Date(x.dueDate) < now && x.status !== "DELIVERED")
-    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
-    .slice(0, 5);
+    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
 
   return (
     <div className="card p-6 flex flex-col gap-6">
@@ -164,9 +163,10 @@ export function PriorityMatrix({ projects }: Props) {
       {needsAttention.length > 0 && (
         <div>
           <p className="text-[11px] font-semibold mb-2 flex items-center gap-1.5" style={{ color: "#dc2626" }}>
-            <AlertTriangle size={11} /> Needs Attention
+            <AlertTriangle size={11} />
+            Overdue — {needsAttention.length} project{needsAttention.length !== 1 ? "s" : ""} pending delivery
           </p>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 overflow-y-auto" style={{ maxHeight: 260 }}>
             {needsAttention.map((p) => {
               const band = PRIORITY_BANDS.find((b) => b.key === p.priority) ?? PRIORITY_BANDS[1];
               const daysOverdue = Math.floor((now.getTime() - new Date(p.dueDate!).getTime()) / 86400_000);
@@ -174,22 +174,22 @@ export function PriorityMatrix({ projects }: Props) {
                 <Link
                   key={p.id}
                   href={`/projects/${p.id}`}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl transition-opacity hover:opacity-75"
-                  style={{ background: "var(--c-elevated)", border: "1px solid var(--c-border)" }}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl transition-opacity hover:opacity-80"
+                  style={{ background: "#fef2f2", border: "1px solid #fecaca" }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#dc2626" }} />
+                  <AlertTriangle size={11} className="flex-shrink-0" style={{ color: "#dc2626" }} />
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium truncate block" style={{ color: "var(--c-text)" }}>{p.name}</span>
-                    <span className="text-[10px]" style={{ color: "var(--c-text-faint)" }}>{p.client.name}</span>
+                    <span className="text-xs font-semibold truncate block" style={{ color: "#991b1b" }}>{p.name}</span>
+                    <span className="text-[10px]" style={{ color: "#b91c1c" }}>{p.client.name}</span>
                   </div>
                   <span
                     className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                    style={{ background: band.bg, color: band.color }}
+                    style={{ background: band.bg, color: band.color, border: `1px solid ${band.border}` }}
                   >
                     {band.label}
                   </span>
-                  <span className="text-[10px] flex-shrink-0" style={{ color: "#dc2626" }}>
-                    {daysOverdue}d overdue
+                  <span className="text-[10px] font-bold flex-shrink-0" style={{ color: "#dc2626" }}>
+                    {daysOverdue}d
                   </span>
                 </Link>
               );
