@@ -63,11 +63,11 @@ export function CalendarClient() {
   while (cells.length % 7 !== 0) cells.push(null);
 
   // Map projects by day string "YYYY-MM-DD"
+  // Slice the ISO string directly to avoid timezone shifting
   const byDay = new Map<string, CalendarProject[]>();
   for (const p of projects) {
     if (!p.dueDate) continue;
-    const d   = new Date(p.dueDate);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const key = p.dueDate.slice(0, 10);
     if (!byDay.has(key)) byDay.set(key, []);
     byDay.get(key)!.push(p);
   }

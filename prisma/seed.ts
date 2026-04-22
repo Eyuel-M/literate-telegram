@@ -98,27 +98,27 @@ async function main() {
 
   // ── Projects ─────────────────────────────────────────────────
   const pNovaBrand = await prisma.project.create({
-    data: { name: "Full Brand Identity",  description: "Complete visual identity system including logo, typography, color palette, and brand guidelines.", status: "IN_PROGRESS", color: "#7c3aed", dueDate: new Date("2024-09-15"), budget: 8500,  clientId: clientNova.id },
+    data: { name: "Full Brand Identity",  description: "Complete visual identity system including logo, typography, color palette, and brand guidelines.", status: "IN_PROGRESS", priority: "HIGH",   color: "#7c3aed", dueDate: new Date("2026-04-28"), budget: 8500,  clientId: clientNova.id },
   });
   const pNovaWeb = await prisma.project.create({
-    data: { name: "Website Redesign",     description: "Landing page and marketing site for product launch.",                                               status: "DISCOVERY",  color: "#3b82f6", dueDate: new Date("2024-10-30"), budget: 5000,  clientId: clientNova.id },
+    data: { name: "Website Redesign",     description: "Landing page and marketing site for product launch.",                                               status: "DISCOVERY",  priority: "MEDIUM", color: "#3b82f6", dueDate: new Date("2026-05-15"), budget: 5000,  clientId: clientNova.id },
   });
   const pPeachBrand = await prisma.project.create({
-    data: { name: "Brand Refresh",        description: "Modernize existing brand while retaining recognizable warmth.",                                      status: "REVIEW",     color: "#f59e0b", dueDate: new Date("2024-08-20"), budget: 4200,  clientId: clientPeach.id },
+    data: { name: "Brand Refresh",        description: "Modernize existing brand while retaining recognizable warmth.",                                      status: "REVIEW",     priority: "HIGH",   color: "#f59e0b", dueDate: new Date("2026-04-30"), budget: 4200,  clientId: clientPeach.id },
   });
   const pMeridianId = await prisma.project.create({
-    data: { name: "Corporate Identity",   description: "Professional identity system for financial advisory firm.",                                          status: "DELIVERED",  color: "#10b981", dueDate: new Date("2024-07-01"), budget: 12000, clientId: clientMeridian.id },
+    data: { name: "Corporate Identity",   description: "Professional identity system for financial advisory firm.",                                          status: "DELIVERED",  priority: "LOW",    color: "#10b981", dueDate: new Date("2026-04-22"), budget: 12000, clientId: clientMeridian.id },
   });
   const pVoltCampaign = await prisma.project.create({
-    data: { name: "Campaign Creative",    description: "Digital campaign assets, social media kit, and motion guidelines.",                                  status: "IN_PROGRESS", color: "#ef4444", dueDate: new Date("2024-09-01"), budget: 6800, clientId: clientVolt.id },
+    data: { name: "Campaign Creative",    description: "Digital campaign assets, social media kit, and motion guidelines.",                                  status: "IN_PROGRESS", priority: "HIGH",  color: "#ef4444", dueDate: new Date("2026-05-05"), budget: 6800, clientId: clientVolt.id },
   });
   const pPeachPrint = await prisma.project.create({
-    data: { name: "Print Collateral",     description: "Business cards, letterhead, and brochure suite.",                                                   status: "PENDING",    color: "#ec4899", dueDate: new Date("2024-10-01"), budget: 2500, clientId: clientPeach.id },
+    data: { name: "Print Collateral",     description: "Business cards, letterhead, and brochure suite.",                                                   status: "DISCOVERY",  priority: "LOW",    color: "#ec4899", dueDate: new Date("2026-05-20"), budget: 2500, clientId: clientPeach.id },
   });
 
   // ── Deliverables ─────────────────────────────────────────────
   const dLogo = await prisma.deliverable.create({
-    data: { name: "Primary Logo",     type: "LOGO",           status: "IN_REVIEW",   sortOrder: 0, projectId: pNovaBrand.id,  dueDate: new Date("2024-08-10") },
+    data: { name: "Primary Logo",     type: "LOGO",           status: "IN_REVIEW",   sortOrder: 0, projectId: pNovaBrand.id,  dueDate: new Date("2026-04-25") },
   });
   const dBrandGuide = await prisma.deliverable.create({
     data: { name: "Brand Guidelines", type: "BRAND_IDENTITY", status: "IN_PROGRESS", sortOrder: 1, projectId: pNovaBrand.id  },
@@ -164,27 +164,27 @@ async function main() {
   // ── Time Entries ─────────────────────────────────────────────
   await prisma.timeEntry.createMany({
     data: [
-      { description: "Initial concept exploration",        duration: 180, date: new Date("2024-07-20"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dLogo.id      },
-      { description: "Client presentation prep",           duration: 60,  date: new Date("2024-07-20"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dLogo.id      },
-      { description: "Revisions after v1 feedback",        duration: 150, date: new Date("2024-07-25"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dLogo.id      },
-      { description: "Final refinements + color variants", duration: 120, date: new Date("2024-07-30"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dLogo.id      },
-      { description: "Brand guidelines — typography",      duration: 200, date: new Date("2024-08-01"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dBrandGuide.id },
-      { description: "Discovery call + moodboard",         duration: 90,  date: new Date("2024-07-15"), userId: eyuel.id, projectId: pNovaWeb.id                                   },
-      { description: "Brand refresh concepts",             duration: 240, date: new Date("2024-07-18"), userId: eyuel.id, projectId: pPeachBrand.id                                },
-      { description: "Campaign brief review",              duration: 60,  date: new Date("2024-07-28"), userId: eyuel.id, projectId: pVoltCampaign.id                              },
-      { description: "Banner design round 1",              duration: 180, date: new Date("2024-07-29"), userId: eyuel.id, projectId: pVoltCampaign.id, deliverableId: dVoltBanner.id },
+      { description: "Initial concept exploration",        duration: 180, date: new Date("2026-04-10"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dLogo.id      },
+      { description: "Client presentation prep",           duration: 60,  date: new Date("2026-04-10"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dLogo.id      },
+      { description: "Revisions after v1 feedback",        duration: 150, date: new Date("2026-04-15"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dLogo.id      },
+      { description: "Final refinements + color variants", duration: 120, date: new Date("2026-04-18"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dLogo.id      },
+      { description: "Brand guidelines — typography",      duration: 200, date: new Date("2026-04-20"), userId: eyuel.id, projectId: pNovaBrand.id,   deliverableId: dBrandGuide.id },
+      { description: "Discovery call + moodboard",         duration: 90,  date: new Date("2026-04-08"), userId: eyuel.id, projectId: pNovaWeb.id                                   },
+      { description: "Brand refresh concepts",             duration: 240, date: new Date("2026-04-12"), userId: eyuel.id, projectId: pPeachBrand.id                                },
+      { description: "Campaign brief review",              duration: 60,  date: new Date("2026-04-19"), userId: eyuel.id, projectId: pVoltCampaign.id                              },
+      { description: "Banner design round 1",              duration: 180, date: new Date("2026-04-21"), userId: eyuel.id, projectId: pVoltCampaign.id, deliverableId: dVoltBanner.id },
     ],
   });
 
   // ── Delegations ──────────────────────────────────────────────
   await prisma.delegation.createMany({
     data: [
-      { title: "Refine logo spacing — v3 feedback",   description: "Client requested more breathing room between icon and wordmark. Apply to dark BG variant.", status: "IN_PROGRESS", priority: "HIGH",   dueDate: new Date("2024-08-12"), teamMemberId: sarah.id, assignedById: eyuel.id, projectId: pNovaBrand.id   },
-      { title: "Export brand guide assets",            description: "Generate all final exports: SVG, PNG 1x/2x/3x, CMYK PDF for print.",                       status: "PENDING",     priority: "MEDIUM", dueDate: new Date("2024-08-20"), teamMemberId: mike.id,  assignedById: eyuel.id, projectId: pNovaBrand.id   },
-      { title: "Social media template set",            description: "Instagram, LinkedIn, Twitter cover and post templates. 5 layouts minimum.",                  status: "PENDING",     priority: "MEDIUM", dueDate: new Date("2024-09-01"), teamMemberId: sarah.id, assignedById: eyuel.id, projectId: pVoltCampaign.id },
-      { title: "Creative direction for Volt campaign", description: "Review and approve all Volt campaign materials before client delivery.",                     status: "IN_PROGRESS", priority: "URGENT", dueDate: new Date("2024-08-15"), teamMemberId: lena.id,  assignedById: eyuel.id, projectId: pVoltCampaign.id },
-      { title: "Peach brand guidelines doc",           description: "Compile all approved assets into the final brand guideline PDF.",                            status: "DONE",        priority: "HIGH",   dueDate: new Date("2024-07-28"), teamMemberId: mike.id,  assignedById: eyuel.id, projectId: pPeachBrand.id  },
-      { title: "Meridian print-ready files",           description: "Prepare all Meridian assets for print production: bleed, crop marks, CMYK.",                 status: "DONE",        priority: "HIGH",   dueDate: new Date("2024-07-05"), teamMemberId: lena.id,  assignedById: eyuel.id, projectId: pMeridianId.id  },
+      { title: "Refine logo spacing — v3 feedback",   description: "Client requested more breathing room between icon and wordmark. Apply to dark BG variant.", status: "IN_PROGRESS", priority: "HIGH",   dueDate: new Date("2026-04-26"), teamMemberId: sarah.id, assignedById: eyuel.id, projectId: pNovaBrand.id   },
+      { title: "Export brand guide assets",            description: "Generate all final exports: SVG, PNG 1x/2x/3x, CMYK PDF for print.",                       status: "PENDING",     priority: "MEDIUM", dueDate: new Date("2026-04-28"), teamMemberId: mike.id,  assignedById: eyuel.id, projectId: pNovaBrand.id   },
+      { title: "Social media template set",            description: "Instagram, LinkedIn, Twitter cover and post templates. 5 layouts minimum.",                  status: "PENDING",     priority: "MEDIUM", dueDate: new Date("2026-05-05"), teamMemberId: sarah.id, assignedById: eyuel.id, projectId: pVoltCampaign.id },
+      { title: "Creative direction for Volt campaign", description: "Review and approve all Volt campaign materials before client delivery.",                     status: "IN_PROGRESS", priority: "URGENT", dueDate: new Date("2026-04-30"), teamMemberId: lena.id,  assignedById: eyuel.id, projectId: pVoltCampaign.id },
+      { title: "Peach brand guidelines doc",           description: "Compile all approved assets into the final brand guideline PDF.",                            status: "DONE",        priority: "HIGH",   dueDate: new Date("2026-04-22"), teamMemberId: mike.id,  assignedById: eyuel.id, projectId: pPeachBrand.id  },
+      { title: "Meridian print-ready files",           description: "Prepare all Meridian assets for print production: bleed, crop marks, CMYK.",                 status: "DONE",        priority: "HIGH",   dueDate: new Date("2026-04-22"), teamMemberId: lena.id,  assignedById: eyuel.id, projectId: pMeridianId.id  },
     ],
   });
 
