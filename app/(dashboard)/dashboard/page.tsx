@@ -7,7 +7,6 @@ import Link from "next/link";
 import { formatDuration, formatDate } from "@/lib/utils";
 import { Users, FolderOpen, MessageSquare, TrendingUp, AlertCircle, GitBranch, Calendar, CheckCircle2, Circle } from "lucide-react";
 import { CircularProgress } from "@/components/dashboard/circular-progress";
-import { StatusPipeline } from "@/components/dashboard/status-pipeline";
 import { WeeklyChart } from "@/components/dashboard/weekly-chart";
 import { PriorityMatrix } from "@/components/dashboard/priority-matrix";
 import { QuickStatus } from "@/components/ui/quick-status";
@@ -55,17 +54,15 @@ async function getAdminData(userId: string, workspaceId: string) {
   ]);
 
   const activeProjects       = projects.filter((p) => ["IN_PROGRESS", "REVIEW", "DISCOVERY"].includes(p.status));
-  const totalDeliverables    = projects.flatMap((p) => p.deliverables).length;
-  const approvedDeliverables = projects.flatMap((p) => p.deliverables).filter((d) => d.status === "APPROVED").length;
+  const allDeliverables      = projects.flatMap((p) => p.deliverables);
+  const totalDeliverables    = allDeliverables.length;
+  const approvedDeliverables = allDeliverables.filter((d) => d.status === "APPROVED").length;
+  const inReviewDeliverables = allDeliverables.filter((d) => d.status === "IN_REVIEW").length;
+  const inProgressDeliverables = allDeliverables.filter((d) => d.status === "IN_PROGRESS").length;
+  const pendingDeliverables  = allDeliverables.filter((d) => d.status === "PENDING").length;
   const dueThisWeek          = projects.filter((p) => p.dueDate && p.dueDate >= now && p.dueDate <= weekOut && p.status !== "DELIVERED").length;
-  const pipeline = [
-    { status: "DISCOVERY",   label: "Discovery",   count: projects.filter((p) => p.status === "DISCOVERY").length,   color: "#60a5fa" },
-    { status: "IN_PROGRESS", label: "In Progress", count: projects.filter((p) => p.status === "IN_PROGRESS").length, color: "#fbbf24" },
-    { status: "REVIEW",      label: "In Review",   count: projects.filter((p) => p.status === "REVIEW").length,      color: "#c084fc" },
-    { status: "DELIVERED",   label: "Delivered",   count: projects.filter((p) => p.status === "DELIVERED").length,   color: "#34d399" },
-  ];
 
-  return { clients, projects, activeProjects, pendingReviews, dueThisWeek, pipeline, totalDeliverables, approvedDeliverables, delegations };
+  return { clients, projects, activeProjects, pendingReviews, dueThisWeek, totalDeliverables, approvedDeliverables, inReviewDeliverables, inProgressDeliverables, pendingDeliverables, delegations };
 }
 
 /* ─── member data ─────────────────────────────────────────── */
@@ -277,24 +274,47 @@ export default async function DashboardPage() {
           ))}
         </div>
 
-        {/* Pipeline + Priority Matrix */}
+        {/* Deliverable Status + Priority Matrix */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>Project Pipeline</h2>
-              <span className="text-xs" style={{ color: "var(--c-text-muted)" }}>{d.projects.length} total</span>
+          <div className="card p-6 flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>Deliverable Status</h2>
+              <span className="text-xs" style={{ color: "var(--c-text-muted)" }}>{d.totalDeliverables} total</span>
             </div>
-            <StatusPipeline bars={d.pipeline} />
-            <div className="mt-6 pt-5 flex items-center gap-6" style={{ borderTop: "1px solid var(--c-border)" }}>
-              <CircularProgress value={d.approvedDeliverables} max={d.totalDeliverables} size={72} label="done" />
-              <div>
-                <p className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>
-                  {d.approvedDeliverables}/{d.totalDeliverables} deliverables approved
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--c-text-muted)" }}>
-                  Across {d.projects.length} project{d.projects.length !== 1 ? "s" : ""}
-                </p>
-              </div>
+
+            <div className="grid grid-cols-2 gap-6 place-items-center py-2">
+              {[
+                { label: "Approved",    count: d.approvedDeliverables,   color: "#34d399" },
+                { label: "In Review",   count: d.inReviewDeliverables,   color: "#c084fc" },
+                { label: "In Progress", count: d.inProgressDeliverables, color: "#fbbf24" },
+                { label: "Pending",     count: d.pendingDeliverables,    color: "#60a5fa" },
+              ].map(({ label, count, color }) => (
+                <div key={label} className="flex flex-col items-center gap-3">
+                  <CircularProgress
+                    value={count}
+                    max={Math.max(d.totalDeliverables, 1)}
+                    size={110}
+                    color={color}
+                    centerText={String(count)}
+                  />
+                  <div className="text-center">
+                    <p className="text-xs font-semibold" style={{ color: "var(--c-text)" }}>{label}</p>
+                    <p className="text-[10px]" style={{ color: "var(--c-text-faint)" }}>
+                      {d.totalDeliverables > 0 ? Math.round((count / d.totalDeliverables) * 100) : 0}% of total
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="pt-4 flex items-center justify-between text-xs"
+              style={{ borderTop: "1px solid var(--c-border)", color: "var(--c-text-faint)" }}
+            >
+              <span>Across {d.projects.length} project{d.projects.length !== 1 ? "s" : ""}</span>
+              <span style={{ color: "#34d399", fontWeight: 600 }}>
+                {d.totalDeliverables > 0 ? Math.round((d.approvedDeliverables / d.totalDeliverables) * 100) : 0}% approval rate
+              </span>
             </div>
           </div>
 

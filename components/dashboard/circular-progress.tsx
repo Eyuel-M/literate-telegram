@@ -8,6 +8,7 @@ interface Props {
   color?: string;
   label?: string;
   sublabel?: string;
+  centerText?: string;
 }
 
 function autoColor(pct: number) {
@@ -17,7 +18,7 @@ function autoColor(pct: number) {
   return "#ef4444";
 }
 
-export function CircularProgress({ value, max, size = 80, strokeWidth, color, label, sublabel }: Props) {
+export function CircularProgress({ value, max, size = 80, strokeWidth, color, label, sublabel, centerText }: Props) {
   const sw = strokeWidth ?? (size >= 100 ? 8 : size >= 70 ? 7 : 6);
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   const radius = (size - sw * 2) / 2;
@@ -57,7 +58,7 @@ export function CircularProgress({ value, max, size = 80, strokeWidth, color, la
       {/* Center label */}
       <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
         <span style={{ fontSize: size * 0.21, fontWeight: 700, color: col, lineHeight: 1 }}>
-          {pct}%
+          {centerText ?? `${pct}%`}
         </span>
         {label && (
           <span style={{ fontSize: size * 0.13, color: "var(--c-text-muted)", marginTop: 2, lineHeight: 1 }}>
