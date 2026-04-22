@@ -5,10 +5,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatDuration, formatDate } from "@/lib/utils";
-import { Users, FolderOpen, MessageSquare, Clock, TrendingUp, AlertCircle, GitBranch, CheckCircle2, Circle, Calendar } from "lucide-react";
+import { Users, FolderOpen, MessageSquare, TrendingUp, AlertCircle, GitBranch, Calendar, CheckCircle2, Circle } from "lucide-react";
 import { CircularProgress } from "@/components/dashboard/circular-progress";
 import { StatusPipeline } from "@/components/dashboard/status-pipeline";
 import { WeeklyChart } from "@/components/dashboard/weekly-chart";
+import { PriorityMatrix } from "@/components/dashboard/priority-matrix";
 import { QuickStatus } from "@/components/ui/quick-status";
 
 /* ─── helpers ─────────────────────────────────────────────── */
@@ -35,8 +36,9 @@ function buildWeekly(entries: { duration: number; date: Date }[]) {
 /* ─── admin data ──────────────────────────────────────────── */
 
 async function getAdminData(userId: string, workspaceId: string) {
-  const weekAgo = new Date(Date.now() - 7 * 86400_000);
-  const [clients, projects, pendingReviews, timeEntries, delegations] = await Promise.all([
+  const now     = new Date();
+  const weekOut = new Date(now.getTime() + 7 * 86400_000);
+  const [clients, projects, pendingReviews, delegations] = await Promise.all([
     prisma.client.count({ where: { workspaceId, status: "ACTIVE", deletedAt: null } }),
     prisma.project.findMany({
       where: { deletedAt: null, client: { workspaceId, deletedAt: null } },
@@ -44,19 +46,18 @@ async function getAdminData(userId: string, workspaceId: string) {
         client: { select: { name: true, color: true } },
         deliverables: { select: { status: true } },
         _count: { select: { deliverables: true } },
-        timeEntries: { select: { duration: true, date: true } },
+        timeEntries: { select: { duration: true } },
       },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.deliverable.count({ where: { deletedAt: null, project: { deletedAt: null, client: { workspaceId, deletedAt: null } }, status: "IN_REVIEW" } }),
-    prisma.timeEntry.findMany({ where: { userId, date: { gte: weekAgo } }, select: { duration: true, date: true } }),
     prisma.delegation.count({ where: { teamMember: { workspaceId }, status: { not: "DONE" }, deletedAt: null } }),
   ]);
 
-  const totalWeekMinutes = timeEntries.reduce((s, e) => s + e.duration, 0);
-  const activeProjects = projects.filter((p) => ["IN_PROGRESS", "REVIEW", "DISCOVERY"].includes(p.status));
+  const activeProjects       = projects.filter((p) => ["IN_PROGRESS", "REVIEW", "DISCOVERY"].includes(p.status));
   const totalDeliverables    = projects.flatMap((p) => p.deliverables).length;
   const approvedDeliverables = projects.flatMap((p) => p.deliverables).filter((d) => d.status === "APPROVED").length;
+  const dueThisWeek          = projects.filter((p) => p.dueDate && p.dueDate >= now && p.dueDate <= weekOut && p.status !== "DELIVERED").length;
   const pipeline = [
     { status: "DISCOVERY",   label: "Discovery",   count: projects.filter((p) => p.status === "DISCOVERY").length,   color: "#60a5fa" },
     { status: "IN_PROGRESS", label: "In Progress", count: projects.filter((p) => p.status === "IN_PROGRESS").length, color: "#fbbf24" },
@@ -64,7 +65,7 @@ async function getAdminData(userId: string, workspaceId: string) {
     { status: "DELIVERED",   label: "Delivered",   count: projects.filter((p) => p.status === "DELIVERED").length,   color: "#34d399" },
   ];
 
-  return { clients, projects, activeProjects, pendingReviews, totalWeekMinutes, weeklyData: buildWeekly(timeEntries), pipeline, totalDeliverables, approvedDeliverables, delegations };
+  return { clients, projects, activeProjects, pendingReviews, dueThisWeek, pipeline, totalDeliverables, approvedDeliverables, delegations };
 }
 
 /* ─── member data ─────────────────────────────────────────── */
@@ -243,11 +244,11 @@ export default async function DashboardPage() {
   const d = await getAdminData(user.id, user.workspaceId);
 
   const stats = [
-    { label: "Active Clients",   value: d.clients,                          icon: Users,         color: "#3b82f6",  bg: "rgba(59,130,246,0.08)",  border: "rgba(59,130,246,0.2)"  },
-    { label: "Active Projects",  value: d.activeProjects.length,             icon: FolderOpen,    color: "#7c3aed",  bg: "rgba(124,58,237,0.08)",  border: "rgba(124,58,237,0.2)"  },
-    { label: "Pending Reviews",  value: d.pendingReviews,                    icon: MessageSquare, color: "#f59e0b",  bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.2)"  },
-    { label: "Open Delegations", value: d.delegations,                       icon: GitBranch,     color: "#ef4444",  bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.2)"   },
-    { label: "This Week",        value: formatDuration(d.totalWeekMinutes),  icon: Clock,         color: "#10b981",  bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.2)"  },
+    { label: "Active Clients",   value: d.clients,               icon: Users,         color: "#3b82f6", bg: "rgba(59,130,246,0.08)",  border: "rgba(59,130,246,0.2)"  },
+    { label: "Active Projects",  value: d.activeProjects.length, icon: FolderOpen,    color: "#7c3aed", bg: "rgba(124,58,237,0.08)",  border: "rgba(124,58,237,0.2)"  },
+    { label: "Pending Reviews",  value: d.pendingReviews,        icon: MessageSquare, color: "#f59e0b", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.2)"  },
+    { label: "Open Delegations", value: d.delegations,           icon: GitBranch,     color: "#ef4444", bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.2)"   },
+    { label: "Due This Week",    value: d.dueThisWeek,           icon: Calendar,      color: "#f97316", bg: "rgba(249,115,22,0.08)",  border: "rgba(249,115,22,0.2)"  },
     { label: "Overall Progress", value: `${d.totalDeliverables > 0 ? Math.round((d.approvedDeliverables / d.totalDeliverables) * 100) : 0}%`, icon: TrendingUp, color: "#a78bfa", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.2)" },
   ];
 
@@ -276,7 +277,7 @@ export default async function DashboardPage() {
           ))}
         </div>
 
-        {/* Pipeline + Weekly chart */}
+        {/* Pipeline + Priority Matrix */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="card p-6">
             <div className="flex items-center justify-between mb-5">
@@ -291,23 +292,13 @@ export default async function DashboardPage() {
                   {d.approvedDeliverables}/{d.totalDeliverables} deliverables approved
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: "var(--c-text-muted)" }}>
-                  Across {d.projects.length} active project{d.projects.length !== 1 ? "s" : ""}
+                  Across {d.projects.length} project{d.projects.length !== 1 ? "s" : ""}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>Hours This Week</h2>
-              <span className="text-sm font-bold" style={{ color: "var(--c-accent-text)" }}>{formatDuration(d.totalWeekMinutes)}</span>
-            </div>
-            <WeeklyChart days={d.weeklyData} />
-            <div className="mt-4 pt-4 flex items-center gap-2 text-xs" style={{ borderTop: "1px solid var(--c-border)", color: "var(--c-text-muted)" }}>
-              <Clock size={12} />
-              Hover each bar to see daily totals
-            </div>
-          </div>
+          <PriorityMatrix projects={d.projects} />
         </div>
 
         {/* Project Matrix */}
