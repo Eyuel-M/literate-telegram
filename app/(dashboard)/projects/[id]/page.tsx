@@ -3,11 +3,13 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { formatDuration, formatDate, DELIVERABLE_TYPES } from "@/lib/utils";
+import { formatDuration, formatDate } from "@/lib/utils";
 import { ArrowLeft, Calendar, DollarSign, Clock, Plus } from "lucide-react";
 import { NewDeliverableButton } from "@/components/deliverables/new-deliverable-button";
+import { DeliverableCard } from "@/components/deliverables/deliverable-card";
 import { QuickStatus } from "@/components/ui/quick-status";
+import { QuickPriority } from "@/components/ui/quick-priority";
+import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { CircularProgress } from "@/components/dashboard/circular-progress";
 
 async function getProject(id: string, workspaceId: string) {
@@ -16,6 +18,7 @@ async function getProject(id: string, workspaceId: string) {
     include: {
       client: { select: { id: true, name: true, color: true } },
       deliverables: {
+        where: { deletedAt: null },
         include: {
           versions: {
             orderBy: { number: "desc" },
@@ -77,14 +80,28 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               <div className="w-2.5 h-2.5 rounded-full" style={{ background: project.color }} />
               <h1 className="text-xl font-bold tracking-tight">{project.name}</h1>
               <QuickStatus entity="project" id={project.id} current={project.status} />
+              <QuickPriority id={project.id} current={project.priority} />
             </div>
             {project.description && (
               <p className="text-sm max-w-xl" style={{ color: "var(--c-text-muted)" }}>{project.description}</p>
             )}
             <div className="flex items-center gap-5 mt-3 flex-wrap">
-              {project.dueDate && (
-                <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--c-text-muted)" }}>
-                  <Calendar size={12} /> Due {formatDate(project.dueDate)}
+              {project.dueDate ? (
+                <div
+                  className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg"
+                  style={{
+                    background: new Date(project.dueDate) < new Date() && project.status !== "DELIVERED" ? "#fef2f2" : "var(--c-elevated)",
+                    color:      new Date(project.dueDate) < new Date() && project.status !== "DELIVERED" ? "#dc2626"  : "var(--c-text-muted)",
+                    border:     `1px solid ${new Date(project.dueDate) < new Date() && project.status !== "DELIVERED" ? "#fecaca" : "var(--c-border)"}`,
+                  }}
+                >
+                  <Calendar size={12} />
+                  {new Date(project.dueDate) < new Date() && project.status !== "DELIVERED" ? "Overdue · " : "Due "}
+                  {formatDate(project.dueDate)}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--c-text-faint)" }}>
+                  <Calendar size={12} /> No due date
                 </div>
               )}
               {project.budget && (
@@ -97,9 +114,10 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap justify-end">
             <CircularProgress value={approved} max={Math.max(total, 1)} size={60} color={project.client.color} />
             <NewDeliverableButton projectId={project.id} />
+            <DeleteProjectButton projectId={project.id} clientId={project.client.id} />
           </div>
         </div>
 
@@ -154,51 +172,19 @@ export default async function ProjectPage({ params }: { params: { id: string } }
                   </div>
 
                   <div className="space-y-3 min-h-[80px]">
-                    {deliverables.map((d) => {
-                      const latestV = d.versions[0];
-                      const thumb = latestV?.assets[0]?.url;
-                      const timeLogged = d.timeEntries.reduce((s, e) => s + e.duration, 0);
-                      const typeLabel = DELIVERABLE_TYPES.find((t) => t.value === d.type)?.label ?? d.type;
-                      const comments = latestV?._count.feedback ?? 0;
-
-                      return (
-                        <div key={d.id} className="card overflow-hidden group">
-                          {thumb && (
-                            <div className="h-32 overflow-hidden relative" style={{ background: "var(--c-elevated)" }}>
-                              <Image
-                                src={thumb} alt={d.name} fill
-                                className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                                sizes="280px"
-                              />
-                              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, var(--c-surface) 0%, transparent 60%)", opacity: 0.7 }} />
-                              {latestV && (
-                                <div className="absolute bottom-2 right-2 bg-black/40 text-white text-[9px] px-1.5 py-0.5 rounded-full font-mono backdrop-blur-sm">
-                                  v{latestV.number}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          <div className="p-3.5">
-                            <p className="text-[10px] mb-0.5" style={{ color: "var(--c-text-faint)" }}>{typeLabel}</p>
-                            <Link href={`/deliverables/${d.id}`}>
-                              <h3
-                                className="text-sm font-semibold mb-2.5 hover:underline"
-                                style={{ color: "var(--c-text)" }}
-                              >
-                                {d.name}
-                              </h3>
-                            </Link>
-                            <div className="flex items-center justify-between">
-                              <QuickStatus entity="deliverable" id={d.id} current={d.status} />
-                              <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--c-text-faint)" }}>
-                                {comments > 0 && <span style={{ color: "#fbbf24" }}>{comments} ✦</span>}
-                                {timeLogged > 0 && <span>{formatDuration(timeLogged)}</span>}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {deliverables.map((d) => (
+                      <DeliverableCard
+                        key={d.id}
+                        id={d.id}
+                        name={d.name}
+                        type={d.type}
+                        status={d.status}
+                        dueDate={d.dueDate}
+                        timeEntries={d.timeEntries}
+                        versions={d.versions}
+                        _count={d._count}
+                      />
+                    ))}
                   </div>
                 </div>
               );
