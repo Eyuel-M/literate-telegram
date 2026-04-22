@@ -7,6 +7,7 @@ import { formatDuration, formatDate, getInitials } from "@/lib/utils";
 import { ArrowLeft, Mail, Calendar, DollarSign, Layers, Palette } from "lucide-react";
 import { NewProjectButton } from "@/components/projects/new-project-button";
 import { QuickStatus } from "@/components/ui/quick-status";
+import { QuickPriority } from "@/components/ui/quick-priority";
 import { CircularProgress } from "@/components/dashboard/circular-progress";
 
 async function getClient(id: string, workspaceId: string) {
@@ -136,15 +137,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                         <h3 className="font-semibold hover:underline">{project.name}</h3>
                       </Link>
                       <QuickStatus entity="project" id={project.id} current={project.status} />
-                      <span
-                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{
-                          background: project.priority === "HIGH" ? "#fef2f2" : project.priority === "LOW" ? "#f0fdf4" : "#fffbeb",
-                          color:      project.priority === "HIGH" ? "#dc2626" : project.priority === "LOW" ? "#16a34a" : "#d97706",
-                        }}
-                      >
-                        {project.priority}
-                      </span>
+                      <QuickPriority id={project.id} current={project.priority} />
                     </div>
                     {project.description && (
                       <p className="text-xs mb-2 line-clamp-1" style={{ color: "var(--c-text-muted)" }}>{project.description}</p>
